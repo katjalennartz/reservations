@@ -13,3 +13,7 @@ Dateien aus dem Upload Ordner hochladen
 Listentyp erstellen
 Erreichbar über 
 misc.php?action=reservations
+
+WICHTIG: Einstellen welche Liste als Default als erstes angezeigt wird.
+Einmal dafür in die Einstellungen des Plugins gehen (Konfiguration -> einstellungen -> Reservierungen)
+Hier auch direkt festlagen, wann der User benachrichtig wird, ob seine Reservierung ausläuft
