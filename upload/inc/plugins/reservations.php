@@ -62,7 +62,7 @@ function reservations_install()
   $db->query("CREATE TABLE " . TABLE_PREFIX . "reservationsentry (
     `entry_id` int(11) NOT NULL AUTO_INCREMENT,
     `uid` int(11) NOT NULL,
-    `username` varchar(200) NOT NULL,
+    `name` varchar(200) NOT NULL,
     `type` varchar(200) NOT NULL,
     `content` varchar(500) NOT NULL,
     `selection` varchar(200) NOT NULL,
@@ -817,7 +817,7 @@ function reservations_admin_load()
       $sub_tabs['reservations'] = [
         "title" => $lang->reservations_overview_typeedit,
         "link" => "index.php?module=config-reservations",
-        "description" => $lang->reservations_overview_typecreatedescr
+        "description" => $lang->reservations_overview_typeeditdescr
       ];
 
       $page->output_nav_tabs($sub_tabs, 'reservations');
@@ -1024,9 +1024,9 @@ function reservations_main()
           $uid = $entry['uid'];
           //edit/delete/verlängern erstellen
           if (($thisuser == $entry['uid']) || ($mybb->usergroup['canmodcp'] == 1)) {
-            $delete =  "<a href=\"misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[d]</a>";
+            $delete =  "<a href=\"misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[-]</a>";
             $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">[e]</a>";
-            $extend =  "<a href=\"misc.php?action=reservations&extend=do&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
+            $extend =  "<a href=\"misc.php?action=reservations&extend=do&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
 
             $res_selects_edit = "";
             //Fürs edit radiobuttons
@@ -1068,6 +1068,10 @@ function reservations_main()
       $res_type = $mybb->get_input('type_hid', MyBB::INPUT_STRING);
       $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
       $content = $mybb->get_input("{$res_type}_con", MyBB::INPUT_STRING);
+      if ($type_opt['selections'] != "" && $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING) == "" ) {
+        error("Du hast keine Auswahloption gewählt.", "Reservierung nicht möglich.");
+        die();
+      } 
       $check = reservations_check($thisuser, $res_type, $content);
       if ($check[0]) {
 
