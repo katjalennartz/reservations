@@ -198,7 +198,7 @@ function reservations_install()
 
 
   $template[5] = array(
-    "title" => 'reservations_indexuserbit',
+    "title" => 'reservations_main',
     "template" => '
     <html>
 	<head>
