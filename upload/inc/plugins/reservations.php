@@ -46,7 +46,7 @@ function reservations_install()
     `type` varchar(200) NOT NULL,
     `descr` VARCHAR(200) NOT NULL,
     `selections` varchar(500),
-    `guestview` tinyint(1) DEFAULT 1,
+    `guest_view` tinyint(1) DEFAULT 1,
     `guest_duration` int(20) NOT NULL,
     `member_duration` int(20) NOT NULL,
     `member_lock` int(20) NOT NULL,
