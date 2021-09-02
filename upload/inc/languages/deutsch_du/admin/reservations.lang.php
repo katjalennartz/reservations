@@ -51,7 +51,7 @@ $l['reservations_typecreate_guest_view'] = "Dürfen Gäste reservieren?";
 $l['reservations_typecreate_guest_view_descr'] = "Dürfen auch Gäste diesen Reservierungstypen benutzen?";
 
 $l['reservations_typecreate_guest_duration'] = "Wie lange dürfen Gäste reservieren?";
-$l['reservations_typecreate_guest_duration_descr'] = "Wieviele Tage dürfen Gäste diesen Typen reservieren? 0 für keine Beschränkung ist NICHT gültig.";
+$l['reservations_typecreate_guest_duration_descr'] = "Wieviele Tage dürfen Gäste diesen Typen reservieren? 0 für keine Beschränkung.";
 
 $l['reservations_typecreate_member_duration'] = "Wie lange dürfen Mitglieder reservieren?";
 $l['reservations_typecreate_member_duration_descr'] = "Wieviele Tage dürfen Mitglieder diesen Typen reservieren? 0 wenn es keine Beschränkung gibt.";
