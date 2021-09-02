@@ -6,6 +6,8 @@ if (!defined("IN_MYBB")) {
   die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
+
+//TODO ALLE EINSTELLUNGEN BERÜCKSICHTIGT?????
 function reservations_info()
 {
   global $lang;
@@ -83,7 +85,7 @@ function reservations_install()
   $setting_array = array(
     'reservations_days_reminder' => array(
       'title' => 'Indexanzeige',
-      'description' => 'Wieviele Tage bevor ihre Reservierung ausläuft, sollen user darauf hingewiesen werden.',
+      'description' => 'Wieviele Tage bevor ihre Reservierung ausläuft, sollen User darauf hingewiesen werden?',
       'optionscode' => 'numeric',
       'value' => '7', // Default
       'disporder' => 1
@@ -91,7 +93,7 @@ function reservations_install()
 
     'reservations_defaulttab' => array(
       'title' => 'Default tab',
-      'description' => 'Welches Tab soll beim Aufrufen der Liste als erstes angezeigt werden. Den maschinenlesbaren Type der Liste angeben.',
+      'description' => 'Welches Tab soll beim Aufrufen der Liste als erstes angezeigt werden? Den maschinenlesbaren Typ der Liste angeben.',
       'optionscode' => 'text',
       'value' => '', // Default
       'disporder' => 1
@@ -483,7 +485,7 @@ $plugins->add_hook("admin_load", "reservations_admin_load");
 function reservations_admin_load()
 {
   global $mybb, $db, $lang, $page, $run_module, $action_file;
-  //Sprachvariable lernen
+  //Sprachvariable laden
   $lang->load('reservations');
 
   if ($page->active_action != 'reservations') {
@@ -495,9 +497,9 @@ function reservations_admin_load()
     if ($mybb->input['action'] == "" || !isset($mybb->input['action'])) {
       //breadcrumb hinzufügen
       $page->add_breadcrumb_item($lang->reservations_menu);
+      $page->output_header($lang->reservations_menu);
 
       //Untermenüs erstellen 
-      $page->output_header($lang->reservations_menu . " - " . $lang->reservations_createtype);
       $sub_tabs['reservations'] = [
         "title" => $lang->reservations_overview,
         "link" => "index.php?module=config-reservations",
@@ -564,33 +566,42 @@ function reservations_admin_load()
           $errors[] = $lang->reservations_error_type;
         }
         if (empty($mybb->input['descr'])) {
-          $errors[] = $lang->reservations_error_desc;
+          $errors[] = $lang->reservations_error_descr;
         }
-        if (empty($mybb->input['guest_view'])) {
-          $errors[] = $lang->reservations_error_guestview;
-        }
-        if (empty($mybb->input['guest_duration'])) {
-          $errors[] = $lang->reservations_error_guestduration;
-        }
-        if (empty($mybb->input['member_lock'])) {
-          $errors[] = $lang->reservations_error_memberlock;
-        }
-        if (empty($mybb->input['member_extend'])) {
-          $errors[] = $lang->reservations_error_memberlock;
-        }
+        // if (empty($mybb->input['guest_view'])) {
+        //   $errors[] = $lang->reservations_error_guestview;
+        // }
+        // if (empty($mybb->input['selections'])) {
+        //   $errors[] = $lang->reservations_error_selections;
+        // }
+        // if (isset($mybb->input['guest_duration'])) {
+        //   $errors[] = $lang->reservations_error_guestduration;
+        // }
+        // if (empty($mybb->input['member_lock'])) {
+        //   $errors[] = $lang->reservations_error_memberlock;
+        // }
+        // if (empty($mybb->input['member_extend'])) {
+        //   $errors[] = $lang->reservations_error_memberlock;
+        // }
+        // if (empty($mybb->input['member_extendtime'])) {
+        //   $errors[] = $lang->reservations_member_extendtime;
+        // }
+        // if (empty($mybb->input['member_extendcnt'])) {
+        //   $errors[] = $lang->reservations_member_extendcnt;
+        // }
+        // if (empty($mybb->input['member_max'])) {
+        //   $errors[] = $lang->reservations_member_max;
+        // }
+        // if (empty($mybb->input['pfid'])) {
+        //   $errors[] = $lang->reservations_error_pfid;
+        // }
 
-        if (empty($mybb->input['member_max'])) {
-          $errors[] = $lang->reservations_error_membermax;
-        }
-        if (empty($mybb->input['pfid'])) {
-          $errors[] = "Fehler mit Profilfeld";
-        }
         //wenn alles passt eintragen
         if (empty($errors)) {
           $insert = [
             "name" => $db->escape_string($mybb->input['name']),
             "type" => $db->escape_string($mybb->input['type']),
-            "type" => $db->escape_string($mybb->input['descr']),
+            "descr" => $db->escape_string($mybb->input['descr']),
             "selections" => $db->escape_string($mybb->input['selections']),
             "guest_view" => intval($mybb->input['guest_view']),
             "guest_duration" => intval($mybb->input['guest_duration']),
@@ -640,73 +651,73 @@ function reservations_admin_load()
       $form_container = new FormContainer($lang->reservations_overview_typecreate);
 
       $form_container->output_row(
-        $lang->reservations_typecreate_name . "<em>*</em>",
+        $lang->reservations_typecreate_name . "<em>*</em>", //name
         $lang->reservations_typecreate_name_descr,
         $form->generate_text_box('name', $mybb->input['name'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_type . "<em>*</em>",
+        $lang->reservations_typecreate_type . "<em>*</em>", //typname maschinenlesbar
         $lang->reservations_typecreate_type_descr,
         $form->generate_text_box('type', $mybb->input['type'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_descr,
+        $lang->reservations_typecreate_descr . "<em>*</em>", //beschreibung fürs input
         $lang->reservations_typecreate_descr_descr,
         $form->generate_text_box('descr', $mybb->input['descr'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_selections,
+        $lang->reservations_typecreate_selections, //Was kann ausgewählt werden?
         $lang->reservations_typecreate_selections_descr,
         $form->generate_text_box('selections', $mybb->input['selections'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_guest_view . "<em>*</em>",
+        $lang->reservations_typecreate_guest_view, //dürfen gäste reservieren
         $lang->reservations_typecreate_guest_view_descr,
         $form->generate_yes_no_radio('guest_view', $mybb->get_input('guest_view'))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_guest_duration . "<em>*</em>",
+        $lang->reservations_typecreate_guest_duration, //wie lange dürfen gäste reservieren
         $lang->reservations_typecreate_guest_duration_descr,
         $form->generate_numeric_field('guest_duration', $mybb->input['guest_duration'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_duration . "<em>*</em>",
+        $lang->reservations_typecreate_member_duration, //wie lange dürfen mitglieder reservieren
         $lang->reservations_typecreate_member_duration_descr,
         $form->generate_numeric_field('member_duration', $mybb->input['member_duration'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_lock . "<em>*</em>",
+        $lang->reservations_typecreate_member_lock, //zeitraum für sperre
         $lang->reservations_typecreate_member_lock_descr,
         $form->generate_numeric_field('member_lock', $mybb->input['member_lock'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extend . "<em>*</em>",
+        $lang->reservations_typecreate_member_extend . "<em>*</em>", //dürfen mitglieder verländern
         $lang->reservations_typecreate_member_extend_descr,
         $form->generate_yes_no_radio('member_extend', $mybb->get_input('member_extend'))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extendtime . "<em>*</em>",
+        $lang->reservations_typecreate_member_extendtime, //wie lange
         $lang->reservations_typecreate_member_extendtime_descr,
         $form->generate_numeric_field('member_extendtime', $mybb->input['member_extendtime'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extendcnt . "<em>*</em>",
-        $lang->reservations_typecreate_member_extendcnt_descr,
+        $lang->reservations_typecreate_member_extendcnt . //Wie oft
+          $lang->reservations_typecreate_member_extendcnt_descr,
         $form->generate_numeric_field('member_extendcnt', $mybb->input['member_extendcnt'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_max . "<em>*</em>",
+        $lang->reservations_typecreate_member_max, //wieviele einträge maximal
         $lang->reservations_typecreate_member_max_descr,
         $form->generate_numeric_field('member_max', $mybb->input['member_max'], array('id' => 'disporder', 'min' => 0))
       );
@@ -727,42 +738,43 @@ function reservations_admin_load()
     //Editieren 
     if ($mybb->input['action'] == "reservations_edit") {
       if ($mybb->request_method == "post") {
+        //sind alle nötigen felder ausgefüllt? Fehler abfangen
         if (empty($mybb->input['name'])) {
-          $errors[] = "nam" . $lang->reservations_error_name;
+          $errors[] = $lang->reservations_error_name;
         }
         if (empty($mybb->input['type'])) {
-          $errors[] = "type" . $lang->reservations_error_type;
+          $errors[] = $lang->reservations_error_type;
         }
         if (empty($mybb->input['descr'])) {
-          $errors[] = "descr" . $lang->reservations_error_desc;
+          $errors[] = $lang->reservations_error_descr;
         }
-        if (empty($mybb->input['guest_view'])) {
-          $errors[] = "guest" . $lang->reservations_error_guestview;
-        }
-        if (empty($mybb->input['selections'])) {
-          $errors[] = "selections";
-        }
-        if (empty($mybb->input['guest_duration'])) {
-          $errors[] = "dur" . $lang->reservations_error_guestduration;
-        }
-        if (empty($mybb->input['member_lock'])) {
-          $errors[] = $lang->reservations_error_memberlock;
-        }
-        if (empty($mybb->input['member_extend'])) {
-          $errors[] = $lang->reservations_error_memberlock;
-        }
-        if (empty($mybb->input['member_extendtime'])) {
-          $errors[] = "memberextendtime";
-        }
-        if (empty($mybb->input['member_extendcnt'])) {
-          $errors[] = "membercnt";
-        }
-        if (empty($mybb->input['member_max'])) {
-          $errors[] = $lang->reservations_error_membermax;
-        }
-        if (empty($mybb->input['pfid'])) {
-          $errors[] = "pfid";
-        }
+        // if (empty($mybb->input['guest_view'])) {
+        //   $errors[] = $lang->reservations_error_guestview;
+        // }
+        // if (empty($mybb->input['selections'])) {
+        //   $errors[] = $lang->reservations_error_selections;
+        // }
+        // if (isset($mybb->input['guest_duration'])) {
+        //   $errors[] = $lang->reservations_error_guestduration;
+        // }
+        // if (empty($mybb->input['member_lock'])) {
+        //   $errors[] = $lang->reservations_error_memberlock;
+        // }
+        // if (empty($mybb->input['member_extend'])) {
+        //   $errors[] = $lang->reservations_error_memberlock;
+        // }
+        // if (empty($mybb->input['member_extendtime'])) {
+        //   $errors[] = $lang->reservations_member_extendtime;
+        // }
+        // if (empty($mybb->input['member_extendcnt'])) {
+        //   $errors[] = $lang->reservations_member_extendcnt;
+        // }
+        // if (empty($mybb->input['member_max'])) {
+        //   $errors[] = $lang->reservations_member_max;
+        // }
+        // if (empty($mybb->input['pfid'])) {
+        //   $errors[] = $lang->reservations_error_pfid;
+        // }
 
         // Keine Felder, dann einfügen
         if (empty($errors)) {
@@ -823,73 +835,73 @@ function reservations_admin_load()
 
       $form_container = new FormContainer($lang->reservations_create_edit);
       $form_container->output_row(
-        $lang->reservations_typecreate_name,
+        $lang->reservations_typecreate_name . "<em>*</em>", //name
         $lang->reservations_typecreate_name_descr,
         $form->generate_text_box('name', htmlspecialchars_uni($edit_res['name']))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_type,
+        $lang->reservations_typecreate_type . "<em>*</em>", //typname maschinenlesbar
         $lang->reservations_typecreate_type_descr,
         $form->generate_text_box('type', htmlspecialchars_uni($edit_res['type']))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_descr,
+        $lang->reservations_typecreate_descr . "<em>*</em>", //beschreibung fürs input
         $lang->reservations_typecreate_descr_descr,
         $form->generate_text_box('descr', htmlspecialchars_uni($edit_res['descr']))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_selections,
+        $lang->reservations_typecreate_selections, //Was kann ausgewählt werden?
         $lang->reservations_typecreate_selections_descr,
         $form->generate_text_box('selections', htmlspecialchars_uni($edit_res['selections']))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_guest_view . "<em>*</em>",
+        $lang->reservations_typecreate_guest_view, //dürfen gäste reservieren
         $lang->reservations_typecreate_guest_view_descr,
         $form->generate_yes_no_radio('guest_view', $edit_res['guest_view'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_guest_duration . "<em>*</em>",
+        $lang->reservations_typecreate_guest_duration, //wie lange dürfen gäste reservieren
         $lang->reservations_typecreate_guest_duration_descr,
         $form->generate_numeric_field('guest_duration', $edit_res['guest_duration'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_duration . "<em>*</em>",
+        $lang->reservations_typecreate_member_duration, //wie lange dürfen mitglieder reservieren
         $lang->reservations_typecreate_member_duration_descr,
         $form->generate_numeric_field('member_duration', $edit_res['member_duration'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_lock . "<em>*</em>",
+        $lang->reservations_typecreate_member_lock, //zeitraum für sperre
         $lang->reservations_typecreate_member_lock_descr,
         $form->generate_numeric_field('member_lock', $edit_res['member_lock'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extend . "<em>*</em>",
+        $lang->reservations_typecreate_member_extend . "<em>*</em>", //dürfen mitglieder verländern
         $lang->reservations_typecreate_member_extend_descr,
         $form->generate_yes_no_radio('member_extend', $edit_res['member_extend'])
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extendtime . "<em>*</em>",
+        $lang->reservations_typecreate_member_extendtime, //wie lange
         $lang->reservations_typecreate_member_extendtime_descr,
         $form->generate_numeric_field('member_extendtime', $edit_res['member_extendtime'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_extendcnt . "<em>*</em>",
-        $lang->reservations_typecreate_member_extendcnt_descr,
+        $lang->reservations_typecreate_member_extendcnt . //Wie oft
+          $lang->reservations_typecreate_member_extendcnt_descr,
         $form->generate_numeric_field('member_extendcnt', $edit_res['member_extendcnt'], array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
-        $lang->reservations_typecreate_member_max . "<em>*</em>",
+        $lang->reservations_typecreate_member_max, //wieviele einträge maximal
         $lang->reservations_typecreate_member_max_descr,
         $form->generate_numeric_field('member_max', $edit_res['member_max'], array('id' => 'disporder', 'min' => 0))
       );
@@ -927,7 +939,9 @@ function reservations_admin_load()
         admin_redirect("index.php?module=config-reservations");
       } else {
         if ($mybb->request_method == "post") {
-          $db->delete_query("reservationstype", "tid='{$tid}'");
+          $typename = $db->fetch_field($db->simple_select("reservationstype", "type", "type_id='{$tid}'"), "type");
+          $db->delete_query("reservationsentry", "type='{$typename}'");
+          $db->delete_query("reservationstype", "type_id='{$tid}'");
           $mybb->input['module'] = "reservations";
           $mybb->input['action'] = $lang->reservations_delete;
           log_admin_action(htmlspecialchars_uni($del_res['name']));
@@ -960,7 +974,7 @@ function reservations_main()
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
-    
+
     // $defaultTab = true;
 
     $get_types = $db->simple_select("reservationstype", "*");
@@ -992,11 +1006,14 @@ function reservations_main()
       $selections = explode(",", $type['selections']);
       $res_selects = "";
       $reservations_bit = "";
+
       //Reservierungstypen nacheinander durchgehen
       foreach ($selections as $sel) {
         //input für radio button
-        $res_selects .= '<input type="radio" name="' . $res_type . '_sel" value="' . $sel . '"/> ' . $sel . '<br/>';
-
+     
+        if ($sel != "") {
+          $res_selects .= '<input type="radio" name="' . $res_type . '_sel" value="' . $sel . '"/> ' . $sel . '<br/>';
+        }
         //ausgabe aufgetrennt nach selection
         $reservations_bituser = "";
 
@@ -1022,7 +1039,7 @@ function reservations_main()
           }
           //userinfos
           $user = get_user($entry['uid']);
-          
+
           $userlink =  build_profile_link($user['username'], $entry['uid']);
           $name = $entry['name'];
 
@@ -1109,7 +1126,7 @@ function reservations_main()
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
         if ($entry['ext_cnt'] >= $cnt) {
           //fehler
-          error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich");
+          error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
         } else {
           $extcounter = $entry['ext_cnt'] + 1;
           $update = array(
@@ -1153,10 +1170,14 @@ function reservations_alert()
 {
   global $templates, $db, $mybb, $reservations_indexalert;
   // Reservierung läuft ab
-  //welche
-  //Verlängern || löschen
+  // Erst einmal gucken, ob es überhaupt schon Listen/Einträge gibt
+
   //Einstellunge bekommen
   $days = $mybb->settings['reservations_days_reminder'];
+  //abfangen wenn es noch keine einstellung gibt
+  if ($days == "") {
+    $days = "0";
+  }
   $thisuser = $mybb->user['uid'];
   $charas = reserverations_get_allchars($thisuser);
   $charastring = implode(",", array_keys($charas));
@@ -1198,7 +1219,7 @@ function reservations_check($thisuser, $res_type, $content)
   $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}'))");
   if ($db->num_rows($entry) > 0) {
     $check[0] = false;
-    $check[1] = "Es gibt schon eine Reservierung mit diesen Eintrag";
+    $check[1] = "Es gibt schon eine Reservierung mit diesen Eintrag.";
     return $check;
   }
 
@@ -1248,7 +1269,7 @@ function reservations_check($thisuser, $res_type, $content)
         $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(member_extendcnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
         if ($summe >= $thisentry['member_extendcnt']) {
           $check[0] = false;
-          $check[1] = "Du hast das erlaubte Maximun der Reservierungen dieser Art erreicht.";
+          $check[1] = "Du hast das erlaubte Maximum der Reservierungen dieser Art erreicht.";
           return $check;
         }
       }
