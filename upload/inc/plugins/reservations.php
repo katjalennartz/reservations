@@ -1212,6 +1212,8 @@ function reservations_check($thisuser, $res_type, $content)
   $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
   $type_lock = $type_opt['member_lock'];
   $type_max = $type_opt['member_max'];
+  $opt_ext_max = $type_opt['member_extendcnt'];
+
   $fid = $type_opt['pfid'];
   $check[0] = true;
 
@@ -1267,7 +1269,7 @@ function reservations_check($thisuser, $res_type, $content)
         }
         // member_extendcnt
         $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
-        if ($summe >= $thisentry['member_extendcnt']) {
+        if ($summe >= $opt_ext_max) {
           $check[0] = false;
           $check[1] = "Du hast das erlaubte Maximum der Reservierungen dieser Art erreicht.";
           return $check;
