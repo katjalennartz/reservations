@@ -283,6 +283,21 @@ document.getElementById("but_tabdefault").click();
     "dateline" => TIME_NOW
   );
 
+  $template[8] = array(
+    "title" => 'reservations_main_mod',
+    "template" => '<div class="res_mod">
+    <h1>Moderatoren Verwaltung - abgelaufene Reservierungen</h1>
+  <p>Achtung, wenn ihr einen Eintrag löscht, kann er nicht mehr berücksichtig werden in Bezug auf den Sperrzeitraum. Also für den Fall, dass ein User die gleiche Reservierung einen bestimmten Zeitraum nicht noch einmal tätigen darf. Einträge sollten erst aus der Datenbank gelöscht werden, wenn dieser Zeitraum abgelaufen ist.<br /> 
+    Es gibt einen Task der die Reservierungen automatisch aufräumt, das hier ist also nur für Ausnahmen nötig ;)  .<br /></p>
+  <div class="res_mod_bit">
+	{$reservations_main_modbit}
+  </div>
+  </div>',
+    "sid" => "-2",
+    "version" => "1.0",
+    "dateline" => TIME_NOW
+  );
+
   foreach ($template as $row) {
     $db->insert_query("templates", $row);
   }
@@ -373,6 +388,13 @@ document.getElementById("but_tabdefault").click();
         flex-basis: 100%;
         text-align: center;
     }
+
+    .res_mod {
+      background: #e9e9e9;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-top: none;
+  }
     
     .res_add_inputs, .res_add_select {
         /* flex-grow: 1; */
@@ -397,6 +419,26 @@ document.getElementById("but_tabdefault").click();
   while ($theme = $db->fetch_array($tids)) {
     update_theme_stylesheet_list($theme['tid']);
   }
+
+  //TASK einfügen:
+
+    $db->insert_query('tasks', array(
+      'title' => 'Reservierungen',
+      'description' => 'Räumt die Reservierungen auf und löscht abgelaufene, die auch keine Sperre mehr berücksichtigen müssen .',
+      'file' => 'reservations',
+      'minute' => '*',
+      'hour' => '*',
+      'day' => '*',
+      'month' => '*',
+      'weekday' => '*',
+      'nextrun' => TIME_NOW,
+      'lastrun' => 0,
+      'enabled' => 1,
+      'logging' => 1,
+      'locked' => 0,
+    ));
+  
+    $cache->update_tasks();
 }
 
 function reservations_uninstall()
@@ -424,6 +466,10 @@ function reservations_uninstall()
   $db->delete_query('settings', "name LIKE 'reservations%'");
   $db->delete_query('settinggroups', "name = 'reservations'");
   rebuild_settings();
+
+//TASK LÖSCHEN
+$db->delete_query('tasks', "file='reservations'");
+$cache->update_tasks();
 }
 
 function reservations_activate()
@@ -982,7 +1028,7 @@ function reservations_main()
     while ($type = $db->fetch_array($get_types)) {
       // welchen typ haben wir
       $res_type = $type['type'];
-      //soll er default sein?
+      //soll der tab default sein?
       if ($res_type ==  $tabtoshow) {
         $defaultTab = true;
       } else {
@@ -999,27 +1045,32 @@ function reservations_main()
       $res_name = $type['name'];
       //inputs erstellen zum reservieren
       $res_inputs =
-        $type['descr'] . ': <input type="text" name="' . $res_type . '_con"/><br/>
-        Name: <input type="text" name="name"/> ';
+        $type['descr'] . ': <input type="text" name="' . $res_type . '_con" /><br/>
+        Spielername: <input type="text" name="name" /> ';
 
       //radiobuttons erstellen
       $selections = explode(",", $type['selections']);
       $res_selects = "";
       $reservations_bit = "";
 
-      //Reservierungstypen nacheinander durchgehen
+      //Reservierungstypen nacheinander durchgehen, sortiert nach Auswahlmöglichkeiten
       foreach ($selections as $sel) {
-        //input für radio button
-     
+        //input für radio button erstellen
         if ($sel != "") {
           $res_selects .= '<input type="radio" name="' . $res_type . '_sel" value="' . $sel . '"/> ' . $sel . '<br/>';
         }
+
         //ausgabe aufgetrennt nach selection
         $reservations_bituser = "";
 
         //die dazugehörigen einträge holen
-        $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}')", array('order_by' => 'content'));
+        $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}') AND enddate >= CURDATE()", array('order_by' => 'content'));
         while ($entry = $db->fetch_array($get_entry)) {
+          // Variablen leeren.
+          $delete =  "";
+          $edit = "";
+          $extend =  "";
+          
           $eid = $entry['entry_id'];
           $uid = $entry['uid'];
           //edit/delete/verlängern erstellen
@@ -1037,10 +1088,14 @@ function reservations_main()
               $res_selects_edit .= '<input type="radio" name="edit_sel" value="' . $save . '" ' . $check . '/> ' . $save;
             }
           }
-          //userinfos
-          $user = get_user($entry['uid']);
-
-          $userlink =  build_profile_link($user['username'], $entry['uid']);
+          //userinfos bekommen, wenn kein Gast
+          if ($entry['uid'] != 0) {
+            $user = get_user($entry['uid']);
+            $userlink =  "(".build_profile_link($user['username'], $entry['uid']).")";
+          } else {
+            $userlink ="";
+          }
+         
           $name = $entry['name'];
 
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
@@ -1061,27 +1116,67 @@ function reservations_main()
       eval("\$reservations_typ .= \"" . $templates->get("reservations_typ") . "\";");
     }
 
+    $reservations_bituser = "";
+    
+    /** **********************
+     * Anzeige für Moderatoren 
+     * ***********************/
+
+    if ($mybb->usergroup['canmodcp'] == 1) {
+      //Einträge 
+      $get_entry = $db->simple_select("reservationsentry", "*", "enddate < CURDATE()", array('order_by' => 'type, content'));
+      while ($entry = $db->fetch_array($get_entry)) {
+        //wieviele tage muss der User warten, bis er wieder reservieren darf
+        $lockdays = $db->fetch_field($db->simple_select("reservationstype", "member_lock", "type = '{$entry['type']}'"), "member_lock");
+        //Das Enddatum bekommen
+        $enddate =  date("d.m.Y", strtotime($entry['enddate'])); // enddate + frist;
+        //umwandeln 
+        $newdate = strtotime($enddate);
+        //Sperrzeitraum dazurechnen
+        $newdate = strtotime("+{$lockdays} day", $newdate);
+        //Hier haben wir unser Datum, wann der User wieder darf
+        $newdate = date('d.m.Y', $newdate);
+          //userinfos bekommen
+          if ($entry['uid'] != 0) {
+            $user = get_user($entry['uid']);
+            $userlink =  "(".build_profile_link($user['username'], $entry['uid']).")";
+          } else {
+            $userlink ="";
+          }
+
+       eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+      }
+      eval("\$reservations_main_mod = \"" . $templates->get("reservations_main_mod") . "\";");
+    }
 
     //Eintrag speichern
     if (isset($mybb->input['res_save'])) {
+      //infos bekommen
       $name = $mybb->get_input('name', MYBB::INPUT_STRING);
       $res_type = $mybb->get_input('type_hid', MyBB::INPUT_STRING);
-      $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
       $content = $mybb->get_input("{$res_type}_con", MyBB::INPUT_STRING);
-      if ($type_opt['selections'] != "" && $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING) == "" ) {
+
+      //entsprechende infos zur liste bekommen
+      $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
+
+      //Es gab Auswahlmöglichkeiten, der User hat aber nichts ausgewählt
+      if ($type_opt['selections'] != "" && $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING) == "") {
         error("Du hast keine Auswahloption gewählt.", "Reservierung nicht möglich.");
         die();
-      } 
+      }
+      //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
-      if ($check[0]) {
 
+      // alles gut, der User darf. 
+      if ($check[0]) {
         if ($thisuser == 0) {
           $duration = $type_opt['guest_duration'];
         } else {
           $duration = $type_opt['member_duration'];
         }
-
+        //Enddatum berechnen
         $date = new DateTime("+" . $duration . " days");
+        //wir brauchen das richtige format für die Datenbank
         $enddate =  $date->format("Y-m-d");
 
         $insert = array(
@@ -1094,6 +1189,7 @@ function reservations_main()
           "enddate" => $enddate,
           "lastupdate" => date("Y-m-d"),
         );
+        //speichern
         $db->insert_query("reservationsentry", $insert);
         redirect("misc.php?action=reservations");
       } else {
@@ -1113,25 +1209,27 @@ function reservations_main()
 
     //eintrag verlängern
     if ($mybb->input['extend'] == "do") {
-
+      //daten aus dem link holen und direkt schauen, dass sie das richtige format haben
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
       $type = $mybb->get_input('type', MyBB::INPUT_STRING);
+      //Eintrag holen
       $entry = $db->fetch_array($db->simple_select("reservationsentry", "*", "entry_id='{$entryid}'"));
-
+      //Einstellungen des Typs holen
       $options = $db->fetch_array($db->simple_select("reservationstype", "*", "type='{$type}'"));
       $days = $options['member_extendtime'];
       $cnt = $options['member_extendcnt'];
+      //neues enddatum berechnen
       $date = date("Y-m-d", strtotime($entry['enddate']));
       $enddate =  date("Y-m-d", strtotime($date . " + {$days} days"));
-      // echo  $enddate;
 
-
+      // darf der user verlängern? 
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
         if ($entry['ext_cnt'] >= $cnt) {
           //fehler
           error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
         } else {
+          //counter hochzählen
           $extcounter = $entry['ext_cnt'] + 1;
           $update = array(
             "enddate" => $enddate,
@@ -1144,6 +1242,7 @@ function reservations_main()
       }
     }
 
+    //Editieren
     if (isset($mybb->input['edit_save'])) {
       $entry = $mybb->get_input('edit', MyBB::INPUT_INT);
       $content = $mybb->get_input('edit_content', MyBB::INPUT_STRING);
@@ -1154,6 +1253,7 @@ function reservations_main()
         "content" => $content,
         "selection" => $selection,
       );
+      //darf er? 
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
         $db->update_query("reservationsentry", $update, "entry_id = {$entry}");
         redirect("misc.php?action=reservations");
@@ -1192,11 +1292,8 @@ function reservations_alert()
     $uid = $thisentry['uid'];
     $res_type = $thisentry['type'];
     $extend =  "<a href=\"misc.php?action=reservations&extend=do&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
-    // echo date("Y-m-d");
+
     $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
-
-
-    // echo  date("Y-m-d");
     eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
   }
   if ($db->num_rows($entry) > 0) {
@@ -1206,8 +1303,8 @@ function reservations_alert()
 }
 
 /**
- * Checker
- * return true or false 
+ * Diese Funktion überprüft ob der User eintragen/Verlängern darf oder nicht.
+ * Gibt ein Array zurück, welches die eventuelle Fehlermeldung enthält. 
  */
 function reservations_check($thisuser, $res_type, $content)
 {
@@ -1222,7 +1319,7 @@ function reservations_check($thisuser, $res_type, $content)
   $check[0] = true;
 
   //schon reserviert? 
-  $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}'))");
+  $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}' AND enddate >= CURDATE()))");
   if ($db->num_rows($entry) > 0) {
     $check[0] = false;
     $check[1] = "Es gibt schon eine Reservierung mit diesen Eintrag.";
@@ -1285,12 +1382,10 @@ function reservations_check($thisuser, $res_type, $content)
   return $check;
 }
 
-
 /*#######################################
 #Hilfsfunktion für Mehrfachcharaktere (accountswitcher)
 #Alle angehangenen Charas holen
 #an die Funktion übergeben: Wer ist Online, die dazugehörige accountswitcher ID (ID des Hauptcharas) 
-#außerdem die Info, ob der Admin erlaubt, dass Charas auf Eis gelegt werden dürfen -> entsprechend ändert sich die Abfrage!
 ######################################*/
 function reserverations_get_allchars($thisuser)
 {
