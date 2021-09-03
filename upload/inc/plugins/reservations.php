@@ -443,7 +443,7 @@ document.getElementById("but_tabdefault").click();
 
 function reservations_uninstall()
 {
-  global $db;
+  global $db, $cache;
   //Tabelle löschen wenn existiert
   if ($db->table_exists("reservationstype")) {
     $db->drop_table("reservationstype");
