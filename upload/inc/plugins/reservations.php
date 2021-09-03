@@ -157,7 +157,7 @@ function reservations_install()
   $template[2] = array(
     "title" => 'reservations_bituser',
     "template" => '<div class="res_bit">
-    <strong>{$entry[\\\'content\\\']}</strong> -  für {$name} bis {$enddate} {$edit} {$delete} {$extend}
+    <strong>{$entry[\\\'content\\\']}</strong> -  für {$name}{$userlink} bis {$enddate} {$edit} {$delete} {$extend}
     <div class="modal" id="edit_{$eid}" style="display: none; padding: 10px; margin: auto; text-align: center;">
       <form method="post" action="misc.php?action=reservations&type={$res_type}">
         {$res_selects_edit}
@@ -293,6 +293,18 @@ document.getElementById("but_tabdefault").click();
 	{$reservations_main_modbit}
   </div>
   </div>',
+    "sid" => "-2",
+    "version" => "1.0",
+    "dateline" => TIME_NOW
+  );
+
+  $template[9] = array(
+    "title" => 'reservations_main_modbit',
+    "template" => '<span class="res_us"><strong>- {$entry[\\\'type\\\']}:</strong>
+    {$entry[\\\'content\\\']} für {$name}{$userlink}- ausgelaufen am {$enddate}. <br />
+    Frist für erneutes Reservieren endet am: {$newdate}.
+    <a href="misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
+    </span>',
     "sid" => "-2",
     "version" => "1.0",
     "dateline" => TIME_NOW
