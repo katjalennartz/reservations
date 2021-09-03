@@ -34,7 +34,7 @@ function reservations_is_installed()
 
 function reservations_install()
 {
-  global $db;
+  global $db, $cache;
   //reste löschen wenn was schiefgegangen ist
   reservations_uninstall();
 
