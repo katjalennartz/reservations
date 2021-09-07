@@ -228,33 +228,7 @@ function reservations_install()
 	</td>
 	</tr>
 	</table>
-			<script>
-		function openRestype(evt, restype) {
- 			 // Declare all variables
-  			var i, res_tabcontent, res_tablinks;
-
-  			// Get all elements with class="tabcontent" and hide them
-  			res_tabcontent = document.getElementsByClassName("res_tabcontent");
-  			for (i = 0; i < res_tabcontent.length; i++) {
-    			res_tabcontent[i].style.display = "none";
-  			}
-
-  			// Get all elements with class="tablinks" and remove the class "active"
- 			res_tablinks = document.getElementsByClassName("res_tablinks");
- 			for (i = 0; i < res_tablinks.length; i++) {
-   				res_tablinks[i].className = res_tablinks[i].className.replace(" active", "");
-			}
-
-	 	 	// Show the current tab, and add an "active" class to the button that opened the tab
-  			document.getElementById(restype).style.display = "block";
-  			evt.currentTarget.className += " active";
-		}
-
-	</script>
-<script>
-// Get the element with id="defaultOpen" and click on it
-document.getElementById("but_tabdefault").click();
-</script>
+	{$reservations_tab_js}
 	{$footer}
 
 </body>
