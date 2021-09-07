@@ -41,5 +41,6 @@ ersetzen mit:
 						'myalerts_setting_row'
 					) . "\";");
 				}
-                `. 
+                `
+		  
 wobei 4 hier die Administratorgruppe ist, evt. müsst ihr das für eure Moderatoren anpassen. 
