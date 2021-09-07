@@ -8,8 +8,8 @@
  * Aktualisierung des Feldes, BL Warnung ausblenden 
  *
  */
-// error_reporting(-1);
-// ini_set('display_errors', true);
+error_reporting(-1);
+ini_set('display_errors', true);
 
 
 /***
@@ -21,7 +21,8 @@ function task_reservations($task)
   global $db, $mybb, $lang;
   $get_type = $db->simple_select("reservationstype", "*");
   while ($entry = $db->fetch_array($get_type)) {
-    $db->delete_query("reservationsentry", "type = '{$entry['type']}' and DATE_ADD(enddate, INTERVAL {$entry['member_lock']} DAY) < CURDATE()'");
+    echo "test".$entry['member_lock'];
+    $db->delete_query("reservationsentry", "type = '{$entry['type']}' and 4 < CURDATE()");
    }
 }
 

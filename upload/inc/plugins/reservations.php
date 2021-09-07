@@ -1,6 +1,7 @@
 <?php
-// error_reporting ( -1 );
-// ini_set ( 'display_errors', true ); 
+error_reporting ( 1 );
+ini_set ( 'display_errors', true ); 
+// error_reporting()
 // Disallow direct access to this file for security reasons
 if (!defined("IN_MYBB")) {
   die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
@@ -90,7 +91,13 @@ function reservations_install()
       'value' => '7', // Default
       'disporder' => 1
     ),
-
+    'reservations_tab' => array(
+      'title' => 'Darstellung als Tab??',
+      'description' => 'Sollen die Reservierungen in Tabs dargestellt werden?',
+      'optionscode' => 'yesno',
+      'value' => '1', // Default
+      'disporder' => 1
+    ),
     'reservations_defaulttab' => array(
       'title' => 'Default tab',
       'description' => 'Welches Tab soll beim Aufrufen der Liste als erstes angezeigt werden? Den maschinenlesbaren Typ der Liste angeben.',
@@ -310,6 +317,43 @@ document.getElementById("but_tabdefault").click();
     "dateline" => TIME_NOW
   );
 
+  $template[10] = array(
+    "title" => 'reservations_tab_js',
+    "template" => '
+			<script>
+		function openRestype(evt, restype) {
+ 			 // Declare all variables
+  			var i, res_tabcontent, res_tablinks;
+
+  			// Get all elements with class="tabcontent" and hide them
+  			res_tabcontent = document.getElementsByClassName("res_tabcontent");
+  			for (i = 0; i < res_tabcontent.length; i++) {
+    			res_tabcontent[i].style.display = "none";
+  			}
+
+  			// Get all elements with class="tablinks" and remove the class "active"
+ 			res_tablinks = document.getElementsByClassName("res_tablinks");
+ 			for (i = 0; i < res_tablinks.length; i++) {
+   				res_tablinks[i].className = res_tablinks[i].className.replace(" active", "");
+			}
+
+	 	 	// Show the current tab, and add an "active" class to the button that opened the tab
+  			document.getElementById(restype).style.display = "block";
+  			evt.currentTarget.className += " active";
+		}
+
+	</script>
+<script>
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("but_tabdefault").click();
+</script>    
+    ',
+    "sid" => "-2",
+    "version" => "1.0",
+    "dateline" => TIME_NOW
+  );
+
+
   foreach ($template as $row) {
     $db->insert_query("templates", $row);
   }
@@ -360,7 +404,6 @@ document.getElementById("but_tabdefault").click();
     /* Style the tab content */
     .res_tabcontent {
       background: #e9e9e9;
-      display: none;
       padding: 6px 12px;
       border: 1px solid #ccc;
       border-top: none;
@@ -434,23 +477,23 @@ document.getElementById("but_tabdefault").click();
 
   //TASK einfügen:
 
-    $db->insert_query('tasks', array(
-      'title' => 'Reservierungen',
-      'description' => 'Räumt die Reservierungen auf und löscht abgelaufene, die auch keine Sperre mehr berücksichtigen müssen .',
-      'file' => 'reservations',
-      'minute' => '*',
-      'hour' => '*',
-      'day' => '*',
-      'month' => '*',
-      'weekday' => '*',
-      'nextrun' => TIME_NOW,
-      'lastrun' => 0,
-      'enabled' => 1,
-      'logging' => 1,
-      'locked' => 0,
-    ));
-  
-    $cache->update_tasks();
+  $db->insert_query('tasks', array(
+    'title' => 'Reservierungen',
+    'description' => 'Räumt die Reservierungen auf und löscht abgelaufene, die auch keine Sperre mehr berücksichtigen müssen .',
+    'file' => 'reservations',
+    'minute' => '*',
+    'hour' => '*',
+    'day' => '*',
+    'month' => '*',
+    'weekday' => '*',
+    'nextrun' => TIME_NOW,
+    'lastrun' => 0,
+    'enabled' => 1,
+    'logging' => 1,
+    'locked' => 0,
+  ));
+
+  $cache->update_tasks();
 }
 
 function reservations_uninstall()
@@ -479,9 +522,9 @@ function reservations_uninstall()
   $db->delete_query('settinggroups', "name = 'reservations'");
   rebuild_settings();
 
-//TASK LÖSCHEN
-$db->delete_query('tasks', "file='reservations'");
-$cache->update_tasks();
+  //TASK LÖSCHEN
+  $db->delete_query('tasks', "file='reservations'");
+  $cache->update_tasks();
 }
 
 function reservations_activate()
@@ -489,6 +532,21 @@ function reservations_activate()
   //VARIABLEN IN TEMPLATES EINFÜGEN
   include MYBB_ROOT . "/inc/adminfunctions_templates.php";
   find_replace_templatesets("index", "#" . preg_quote('{$header}') . "#i", '{$header}{$reservations_indexalert}');
+
+  if (function_exists('myalerts_is_activated') && myalerts_is_activated()) {
+
+    $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
+
+    if (!$alertTypeManager) {
+      $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
+    }
+
+    $alertTypeReservationsNew = new MybbStuff_MyAlerts_Entity_AlertType();
+    $alertTypeReservationsNew->setCanBeUserDisabled(true);
+    $alertTypeReservationsNew->setCode("reservations_newEntry");
+    $alertTypeReservationsNew->setEnabled(true);
+    $alertTypeManager->add($alertTypeReservationsNew);
+  }
 }
 
 function reservations_deactivate()
@@ -496,6 +554,14 @@ function reservations_deactivate()
   //VARIABLEN AUS TEMPLATES LÖSCHEN
   include MYBB_ROOT . "/inc/adminfunctions_templates.php";
   find_replace_templatesets("index", "#" . preg_quote('{$reservations_indexalert}') . "#i", '');
+
+  if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+    $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
+    if (!$alertTypeManager) {
+      $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
+    }
+    $alertTypeManager->deleteByCode('reservations_newEntry');
+  }
 }
 
 /**
@@ -626,33 +692,6 @@ function reservations_admin_load()
         if (empty($mybb->input['descr'])) {
           $errors[] = $lang->reservations_error_descr;
         }
-        // if (empty($mybb->input['guest_view'])) {
-        //   $errors[] = $lang->reservations_error_guestview;
-        // }
-        // if (empty($mybb->input['selections'])) {
-        //   $errors[] = $lang->reservations_error_selections;
-        // }
-        // if (isset($mybb->input['guest_duration'])) {
-        //   $errors[] = $lang->reservations_error_guestduration;
-        // }
-        // if (empty($mybb->input['member_lock'])) {
-        //   $errors[] = $lang->reservations_error_memberlock;
-        // }
-        // if (empty($mybb->input['member_extend'])) {
-        //   $errors[] = $lang->reservations_error_memberlock;
-        // }
-        // if (empty($mybb->input['member_extendtime'])) {
-        //   $errors[] = $lang->reservations_member_extendtime;
-        // }
-        // if (empty($mybb->input['member_extendcnt'])) {
-        //   $errors[] = $lang->reservations_member_extendcnt;
-        // }
-        // if (empty($mybb->input['member_max'])) {
-        //   $errors[] = $lang->reservations_member_max;
-        // }
-        // if (empty($mybb->input['pfid'])) {
-        //   $errors[] = $lang->reservations_error_pfid;
-        // }
 
         //wenn alles passt eintragen
         if (empty($errors)) {
@@ -806,33 +845,6 @@ function reservations_admin_load()
         if (empty($mybb->input['descr'])) {
           $errors[] = $lang->reservations_error_descr;
         }
-        // if (empty($mybb->input['guest_view'])) {
-        //   $errors[] = $lang->reservations_error_guestview;
-        // }
-        // if (empty($mybb->input['selections'])) {
-        //   $errors[] = $lang->reservations_error_selections;
-        // }
-        // if (isset($mybb->input['guest_duration'])) {
-        //   $errors[] = $lang->reservations_error_guestduration;
-        // }
-        // if (empty($mybb->input['member_lock'])) {
-        //   $errors[] = $lang->reservations_error_memberlock;
-        // }
-        // if (empty($mybb->input['member_extend'])) {
-        //   $errors[] = $lang->reservations_error_memberlock;
-        // }
-        // if (empty($mybb->input['member_extendtime'])) {
-        //   $errors[] = $lang->reservations_member_extendtime;
-        // }
-        // if (empty($mybb->input['member_extendcnt'])) {
-        //   $errors[] = $lang->reservations_member_extendcnt;
-        // }
-        // if (empty($mybb->input['member_max'])) {
-        //   $errors[] = $lang->reservations_member_max;
-        // }
-        // if (empty($mybb->input['pfid'])) {
-        //   $errors[] = $lang->reservations_error_pfid;
-        // }
 
         // Keine Felder, dann einfügen
         if (empty($errors)) {
@@ -1033,6 +1045,8 @@ function reservations_main()
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
 
+    $res_tab = $mybb->settings['reservations_tab'];
+
     // $defaultTab = true;
 
     $get_types = $db->simple_select("reservationstype", "*");
@@ -1082,7 +1096,7 @@ function reservations_main()
           $delete =  "";
           $edit = "";
           $extend =  "";
-          
+
           $eid = $entry['entry_id'];
           $uid = $entry['uid'];
           //edit/delete/verlängern erstellen
@@ -1103,11 +1117,11 @@ function reservations_main()
           //userinfos bekommen, wenn kein Gast
           if ($entry['uid'] != 0) {
             $user = get_user($entry['uid']);
-            $userlink =  "(".build_profile_link($user['username'], $entry['uid']).")";
+            $userlink =  "(" . build_profile_link($user['username'], $entry['uid']) . ")";
           } else {
-            $userlink ="";
+            $userlink = "";
           }
-         
+
           $name = $entry['name'];
 
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
@@ -1129,7 +1143,7 @@ function reservations_main()
     }
 
     $reservations_bituser = "";
-    
+
     /** **********************
      * Anzeige für Moderatoren 
      * ***********************/
@@ -1148,15 +1162,15 @@ function reservations_main()
         $newdate = strtotime("+{$lockdays} day", $newdate);
         //Hier haben wir unser Datum, wann der User wieder darf
         $newdate = date('d.m.Y', $newdate);
-          //userinfos bekommen
-          if ($entry['uid'] != 0) {
-            $user = get_user($entry['uid']);
-            $userlink =  "(".build_profile_link($user['username'], $entry['uid']).")";
-          } else {
-            $userlink ="";
-          }
+        //userinfos bekommen
+        if ($entry['uid'] != 0) {
+          $user = get_user($entry['uid']);
+          $userlink =  "(" . build_profile_link($user['username'], $entry['uid']) . ")";
+        } else {
+          $userlink = "";
+        }
 
-       eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+        eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
       }
       eval("\$reservations_main_mod = \"" . $templates->get("reservations_main_mod") . "\";");
     }
@@ -1201,7 +1215,34 @@ function reservations_main()
           "enddate" => $enddate,
           "lastupdate" => date("Y-m-d"),
         );
-        //speichern
+
+        //Der Hauptaccount von Moderatoren bekommt einen Alert 
+        if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+          $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
+          while ($get_mod = $db->fetch_array($get_mods_q)) {
+            $touid = $get_mod['uid'];
+            if (is_member(4, $touid)) {
+              if ($uid != 0) {
+                $user = get_user($uid);
+                $fromuser = build_profile_link($user['username'], $uid);
+              } else {
+                $fromuser = "Gast";
+              }
+              $alertType = MybbStuff_MyAlerts_AlertTypeManager::getInstance()->getByCode('reservations_newEntry');
+              if ($alertType != NULL && $alertType->getEnabled() && $thisuser != $touid) {
+                $alert = new MybbStuff_MyAlerts_Entity_Alert((int)$touid, $alertType);
+                $alert->setExtraDetails([
+                  'type' => $res_type,
+                  'fromuser' => $fromuser,
+                  'name' => $name
+                ]);
+                MybbStuff_MyAlerts_AlertManager::getInstance()->addAlert($alert);
+              }
+            }
+          }
+          // var_dump($alert);
+        }
+         //speichern
         $db->insert_query("reservationsentry", $insert);
         redirect("misc.php?action=reservations");
       } else {
@@ -1257,6 +1298,7 @@ function reservations_main()
     //Editieren
     if (isset($mybb->input['edit_save'])) {
       $entry = $mybb->get_input('edit', MyBB::INPUT_INT);
+      $name = $mybb->get_input('edit_name', MyBB::INPUT_STRING);
       $content = $mybb->get_input('edit_content', MyBB::INPUT_STRING);
       $selection = $mybb->get_input('edit_sel', MyBB::INPUT_STRING);
 
@@ -1271,7 +1313,9 @@ function reservations_main()
         redirect("misc.php?action=reservations");
       }
     }
-
+    if ($res_tab) {
+      eval("\$reservations_tab_js = \"" . $templates->get("reservations_tab_js") . "\";");
+    }
     eval("\$reservations_main = \"" . $templates->get("reservations_main") . "\";");
     output_page($reservations_main);
     die();
@@ -1297,7 +1341,7 @@ function reservations_alert()
   $thisuser = $mybb->user['uid'];
   $charas = reserverations_get_allchars($thisuser);
   $charastring = implode(",", array_keys($charas));
-  $entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE uid IN ({$charastring}) AND DATEDIFF(enddate, CURDATE()) >= {$days} ORDER BY uid, type");
+  $entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE uid IN ({$charastring}) AND DATEDIFF(enddate, CURDATE()) <= {$days} ORDER BY uid, type");
 
   while ($thisentry = $db->fetch_array($entry)) {
     $eid = $thisentry['entry_id'];
@@ -1353,13 +1397,13 @@ function reservations_check($thisuser, $res_type, $content)
     $charas = reserverations_get_allchars($thisuser);
     //wir wollen alle Accounts des Users überprüfen
     foreach ($charas as $uid => $username) {
-      $cnt = $db->fetch_field($db->simple_select("reservationsentry", "count(*) as cnt", "uid = {$uid} and type = '{$res_type}'"), "cnt");
+      $cnt = $db->fetch_field($db->simple_select("reservationsentry", "count(*) as cnt", "uid = {$uid} and type = '{$res_type}' AND CURDATE() < enddate"), "cnt");
       $countentrys += $cnt;
     }
     //Wir testen wie oft der Account reserviert hat
     if ($countentrys >= $type_max && $type_max != 0) {
       $check[0] = false;
-      $check[1] = "Du hast schon die maximale Zahl der Reservierungen erreicht. Du hast gerade " . $db->num_rows($countentrys) . " Reservierungen. Erlaubt sind: " . $type_max;
+      $check[1] = "Du hast schon die maximale Zahl der Reservierungen erreicht. Du hast gerade " . $countentrys . " Reservierungen. Erlaubt sind: " . $type_max;
       return $check;
     }
     if ($type_lock != 0) {
@@ -1419,3 +1463,75 @@ function reserverations_get_allchars($thisuser)
   }
   return $charas;
 }
+
+
+/**************************** 
+ * 
+ *  My Alert Integration
+ * 
+ * *************************** */
+if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
+  $plugins->add_hook("global_start", "reservations_myAlert");
+}
+
+function reservations_myAlert()
+{
+  global $mybb, $lang;
+  $lang->load('reservations');
+  // echo "im alert ding drinnen";
+  /**
+   * We need our MyAlert Formatter
+   * Alert Formater for New Entry in reservations
+   */
+  
+  class MybbStuff_MyAlerts_Formatter_ReservationsNewEntryFormatter extends MybbStuff_MyAlerts_Formatter_AbstractFormatter
+  {
+    /**
+     * Build the output string for listing page and the popup.
+     * @param MybbStuff_MyAlerts_Entity_Alert $alert The alert to format.
+     * @return string The formatted alert string.
+     */
+    public function formatAlert(MybbStuff_MyAlerts_Entity_Alert $alert, array $outputAlert)
+    {
+      $alertContent = $alert->getExtraDetails();
+      return $this->lang->sprintf(
+        $this->lang->reservations_newEntry,
+        $outputAlert['from_user'],
+        $alertContent['name'],
+        $alertContent['type']
+      );
+    }
+    /**
+     * Initialize the language, we need the variables $l['myalerts_setting_alertname'] for user cp! 
+     * and if need initialize other stuff
+     * @return void
+     */
+    public function init()
+    {
+      if (!$this->lang->reservations) {
+        $this->lang->load('reservations');
+      }
+    }
+    /**
+     * We want to define where we want to link to. 
+     * @param MybbStuff_MyAlerts_Entity_Alert $alert for which alert.
+     * @return string return the link.
+     */
+    public function buildShowLink(MybbStuff_MyAlerts_Entity_Alert $alert)
+    {
+      var_dump($alert);
+      $alertContent = $alert->getExtraDetails();
+      return $this->mybb->settings['bburl'] . '/misc.php?action=reservations';
+    }
+  }
+  if (class_exists('MybbStuff_MyAlerts_AlertFormatterManager')) {
+    $formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::getInstance();
+    if (!$formatterManager) {
+      $formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::createInstance($mybb, $lang);
+    }
+    $formatterManager->registerFormatter(
+      new MybbStuff_MyAlerts_Formatter_ReservationsNewEntryFormatter($mybb, $lang, 'reservations_newEntry')
+    );
+  }
+}
+

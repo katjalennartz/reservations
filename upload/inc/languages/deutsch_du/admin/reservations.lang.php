@@ -6,6 +6,8 @@ $l['reservations_permission_type'] = "Darf Reservierungdtypen anlegen?";
 
 $l['reservations_menu'] = "Reservierungen";
 
+$l['reservations_permission'] = "Darf Reservierungen verwalten.";
+
 $l['reservations_overview'] = "Reservierungstyp Übersicht";
 $l['reservations_overview_descr'] = "Eine Übersicht der erstellten Reservierungstypen.";
 
