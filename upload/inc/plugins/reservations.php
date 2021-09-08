@@ -1,6 +1,6 @@
 <?php
-error_reporting ( 1 );
-ini_set ( 'display_errors', true ); 
+error_reporting(1);
+ini_set('display_errors', true);
 // error_reporting()
 // Disallow direct access to this file for security reasons
 if (!defined("IN_MYBB")) {
@@ -127,7 +127,7 @@ function reservations_install()
   //Templates erstellen
   $template[0] = array(
     "title" => 'reservations_add',
-    "template" => '<form method="post" action="misc.php?action=reservations&type={$res_type}">				
+    "template" => '<form name="{$res_type}" method="post" action="misc.php?action=reservations&type={$res_type}">				
     <div class="res_add">
     <h2>Reservieren</h2>
       <div class="res_add_select res_item">
@@ -284,7 +284,7 @@ function reservations_install()
     "template" => '<span class="res_us"><strong>- {$entry[\\\'type\\\']}:</strong>
     {$entry[\\\'content\\\']} für {$name}{$userlink}- ausgelaufen am {$enddate}. <br />
     Frist für erneutes Reservieren endet am: {$newdate}.
-    <a href="misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
+    <a href="misc.php?action=reservations&delete=do_delete&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
     </span>',
     "sid" => "-2",
     "version" => "1.0",
@@ -983,6 +983,8 @@ function reservations_admin_load()
         admin_redirect("index.php?module=config-reservations");
       } else {
         if ($mybb->request_method == "post") {
+          // echo "hier ist was falsch";
+          // die();
           $typename = $db->fetch_field($db->simple_select("reservationstype", "type", "type_id='{$tid}'"), "type");
           $db->delete_query("reservationsentry", "type='{$typename}'");
           $db->delete_query("reservationstype", "type_id='{$tid}'");
@@ -1077,7 +1079,7 @@ function reservations_main()
           if (($thisuser == $entry['uid']) || ($mybb->usergroup['canmodcp'] == 1)) {
             $delete =  "<a href=\"misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[-]</a>";
             $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">[e]</a>";
-            $extend =  "<a href=\"misc.php?action=reservations&extend=do&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
+            $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
 
             $res_selects_edit = "";
             //Fürs edit radiobuttons
@@ -1216,7 +1218,7 @@ function reservations_main()
           }
           // var_dump($alert);
         }
-         //speichern
+        //speichern
         $db->insert_query("reservationsentry", $insert);
         redirect("misc.php?action=reservations");
       } else {
@@ -1226,16 +1228,18 @@ function reservations_main()
     }
 
     //eintrag löschen
-    if ($mybb->input['delete'] == "do") {
+    if ($mybb->input['delete'] == "do_delete") {
+
       $entry = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
         $db->delete_query('reservationsentry', "entry_id = {$entry}");
+        redirect("misc.php?action=reservations");
       }
     }
 
     //eintrag verlängern
-    if ($mybb->input['extend'] == "do") {
+    if ($mybb->input['extend'] == "do_extend") {
       //daten aus dem link holen und direkt schauen, dass sie das richtige format haben
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
@@ -1321,7 +1325,7 @@ function reservations_alert()
     $eid = $thisentry['entry_id'];
     $uid = $thisentry['uid'];
     $res_type = $thisentry['type'];
-    $extend =  "<a href=\"misc.php?action=reservations&extend=do&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
+    $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
 
     $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
     eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
@@ -1457,7 +1461,7 @@ function reservations_myAlert()
    * We need our MyAlert Formatter
    * Alert Formater for New Entry in reservations
    */
-  
+
   class MybbStuff_MyAlerts_Formatter_ReservationsNewEntryFormatter extends MybbStuff_MyAlerts_Formatter_AbstractFormatter
   {
     /**
@@ -1508,4 +1512,3 @@ function reservations_myAlert()
     );
   }
 }
-
