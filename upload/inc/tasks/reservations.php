@@ -19,14 +19,12 @@ ini_set('display_errors', true);
 function task_reservations($task)
 {
   global $db, $mybb, $lang;
+
   $get_type = $db->simple_select("reservationstype", "*");
   while ($entry = $db->fetch_array($get_type)) {
-    echo "test".$entry['member_lock'];
-    $db->delete_query("reservationsentry", "type = '{$entry['type']}' and 4 < CURDATE()");
-   }
+    // $db->write_query("SELECT * FROM mybb_reservationsentry WHERE type = '{$entry['type']}' and DATE_ADD(enddate, INTERVAL {$entry['member_lock']} DAY) < CURDATE()");
+    $db->delete_query("reservationsentry", "type = '{$entry['type']}' and DATE_ADD(enddate, INTERVAL {$entry['member_lock']} DAY) < CURDATE()");
+  }
+  add_task_log($task, "Reservierungen bereinigt");
+
 }
-
-
-//TODO Templates hinzufügen bzw. ändern 
-//TODO löschen bei modcp programmieren 
-//TODO Task hinzufügen

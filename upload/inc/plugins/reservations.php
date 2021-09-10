@@ -1,7 +1,7 @@
 <?php
 error_reporting(1);
 ini_set('display_errors', true);
-// error_reporting()
+error_reporting();
 // Disallow direct access to this file for security reasons
 if (!defined("IN_MYBB")) {
   die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
@@ -9,6 +9,9 @@ if (!defined("IN_MYBB")) {
 
 
 //TODO ALLE EINSTELLUNGEN BERÜCKSICHTIGT?????
+//TODO Lock überprüfen! 
+//TODO löschen von member nur enddate ändern
+//TODO mods richtig löschen
 function reservations_info()
 {
   global $lang;
@@ -69,9 +72,17 @@ function reservations_install()
     `selection` varchar(200) NOT NULL,
     `startdate` date NOT NULL,
     `enddate` date NOT NULL,
-    `lastupdate` int(20) NOT NULL,
+    `lastupdate` date NOT NULL,
     `ext_cnt` int(20) NOT NULL DEFAULT '0',
     PRIMARY KEY (`entry_id`)
+     ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
+
+  // Tabelle für Benachrichtigung
+  $db->query("CREATE TABLE " . TABLE_PREFIX . "reservationsmodread (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `notread_uids` int(11) NOT NULL,
+    `entry_id` int(11) NOT NULL,
+    PRIMARY KEY (`id`)
      ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
 
   // Einstellungen
@@ -127,7 +138,7 @@ function reservations_install()
   //Templates erstellen
   $template[0] = array(
     "title" => 'reservations_add',
-    "template" => '<form name="{$res_type}" method="post" action="misc.php?action=reservations&type={$res_type}">				
+    "template" => '<form id="{$res_type}" method="post" action="misc.php?action=reservations&type={$res_type}">				
     <div class="res_add">
     <h2>Reservieren</h2>
       <div class="res_add_select res_item">
@@ -138,7 +149,8 @@ function reservations_install()
       </div>
       <div class="res_add_save res_item">
         <input type="hidden" value="{$res_type}" name="type_hid" />
-        <input type="submit" value="speichern" name="res_save" />
+        <button type="submit" form="{$res_type}" value="Submit" name="res_save">Submit</button>
+
       </div>
     </div>
   </form> 
@@ -166,12 +178,12 @@ function reservations_install()
     "template" => '<div class="res_bit">
     <strong>{$entry[\\\'content\\\']}</strong> -  für {$name}{$userlink} bis {$enddate} {$edit} {$delete} {$extend}
     <div class="modal" id="edit_{$eid}" style="display: none; padding: 10px; margin: auto; text-align: center;">
-      <form method="post" action="misc.php?action=reservations&type={$res_type}">
+      <form method="post" action="misc.php?action=reservations&type={$res_type}" id="edit_{$res_type}">
         {$res_selects_edit}
       <input type="hidden" name="edit" value="{$entry[\\\'entry_id\\\']}"/> 
       <br/>{$type[\\\'descr\\\']}: <input type="text" value="{$entry[\\\'content\\\']}" name="edit_content"/> <br />
       Name: <input type="text" value="{$entry[\\\'name\\\']}" name="edit_name"/><br />
-      <input type="submit" value="speichern" name="edit_save" />
+      <button form="edit_{$res_type}" type="submit" value="speichern" name="edit_save" />
       </form>
     </div>
   </div>
@@ -184,8 +196,10 @@ function reservations_install()
   $template[3] = array(
     "title" => 'reservations_indexalert',
     "template" => '<div class="reservations_index">
-    <strong>folgende Reservierungen laufen aus:</strong><br />
+    <strong>Reservierungsinformation:</strong><br />
     {$reservations_indexuserbit} <br/>
+	{$reservations_indexmodnewentry}
+	<br/>
     <a href="misc.php?action=reservations">Zu allen Reservierungen</a>
   </div>
   ',
@@ -223,7 +237,7 @@ function reservations_install()
 			</div>
 		
 			{$reservations_typ}
-
+    {$reservations_main_mod}
 
 	</td>
 	</tr>
@@ -284,7 +298,7 @@ function reservations_install()
     "template" => '<span class="res_us"><strong>- {$entry[\\\'type\\\']}:</strong>
     {$entry[\\\'content\\\']} für {$name}{$userlink}- ausgelaufen am {$enddate}. <br />
     Frist für erneutes Reservieren endet am: {$newdate}.
-    <a href="misc.php?action=reservations&delete=do_delete&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
+    <a href="misc.php?action=reservations&do_delete=mod_delete&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
     </span>',
     "sid" => "-2",
     "version" => "1.0",
@@ -322,6 +336,17 @@ function reservations_install()
 document.getElementById("but_tabdefault").click();
 </script>    
     ',
+    "sid" => "-2",
+    "version" => "1.0",
+    "dateline" => TIME_NOW
+  );
+
+  $template[11] = array(
+    "title" => 'reservations_indexmodnewentry',
+    "template" => '
+    Neue Reservierung vom Typ {$entrymod[\\\'type\\\']}: 
+    Getätigt von {$entrymod[\\\'name\\\']} {$userlink} - {$entrymod[\\\'content\\\']} 
+    <a href="index.php?action=markread&mark={$modentry[\\\'id\\\']}">[mark read]</a> </br>',
     "sid" => "-2",
     "version" => "1.0",
     "dateline" => TIME_NOW
@@ -449,8 +474,6 @@ document.getElementById("but_tabdefault").click();
     update_theme_stylesheet_list($theme['tid']);
   }
 
-  //TASK einfügen:
-
   $db->insert_query('tasks', array(
     'title' => 'Reservierungen',
     'description' => 'Räumt die Reservierungen auf und löscht abgelaufene, die auch keine Sperre mehr berücksichtigen müssen .',
@@ -480,6 +503,10 @@ function reservations_uninstall()
   if ($db->table_exists("reservationsentry")) {
     $db->drop_table("reservationsentry");
   }
+  if ($db->table_exists("reservationsmodread")) {
+    $db->drop_table("reservationsmodread");
+  }
+
   //TEMPLATES LÖSCHEN 
   $db->delete_query("templates", "title LIKE 'reservations%'");
   $db->delete_query("templategroups", "prefix = 'reservations'");
@@ -506,21 +533,6 @@ function reservations_activate()
   //VARIABLEN IN TEMPLATES EINFÜGEN
   include MYBB_ROOT . "/inc/adminfunctions_templates.php";
   find_replace_templatesets("index", "#" . preg_quote('{$header}') . "#i", '{$header}{$reservations_indexalert}');
-
-  if (function_exists('myalerts_is_activated') && myalerts_is_activated()) {
-
-    $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
-
-    if (!$alertTypeManager) {
-      $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
-    }
-
-    $alertTypeReservationsNew = new MybbStuff_MyAlerts_Entity_AlertType();
-    $alertTypeReservationsNew->setCanBeUserDisabled(true);
-    $alertTypeReservationsNew->setCode("reservations_newEntry");
-    $alertTypeReservationsNew->setEnabled(true);
-    $alertTypeManager->add($alertTypeReservationsNew);
-  }
 }
 
 function reservations_deactivate()
@@ -528,14 +540,6 @@ function reservations_deactivate()
   //VARIABLEN AUS TEMPLATES LÖSCHEN
   include MYBB_ROOT . "/inc/adminfunctions_templates.php";
   find_replace_templatesets("index", "#" . preg_quote('{$reservations_indexalert}') . "#i", '');
-
-  if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
-    $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::getInstance();
-    if (!$alertTypeManager) {
-      $alertTypeManager = MybbStuff_MyAlerts_AlertTypeManager::createInstance($db, $cache);
-    }
-    $alertTypeManager->deleteByCode('reservations_newEntry');
-  }
 }
 
 /**
@@ -820,7 +824,7 @@ function reservations_admin_load()
           $errors[] = $lang->reservations_error_descr;
         }
 
-        // Keine Felder, dann einfügen
+        // Keine Fehler, dann einfügen
         if (empty($errors)) {
           $tid = $mybb->get_input('tid', MyBB::INPUT_INT);
           $oldtype = $mybb->get_input('oldtype', MyBB::INPUT_STRING);
@@ -1014,23 +1018,23 @@ function reservations_main()
 {
   global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser;
 
-
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
-
+    //tabs ja oder nein?
     $res_tab = $mybb->settings['reservations_tab'];
 
-    // $defaultTab = true;
-
-    $get_types = $db->simple_select("reservationstype", "*");
+    $defaultTab = true;
     //Typen bekommen
+    $get_types = $db->simple_select("reservationstype", "*");
+
     while ($type = $db->fetch_array($get_types)) {
-      // welchen typ haben wir
+      // // welchen typ haben wir
       $res_type = $type['type'];
-      //soll der tab default sein?
+
+      // //soll der tab default sein?
       if ($res_type ==  $tabtoshow) {
         $defaultTab = true;
       } else {
@@ -1048,11 +1052,13 @@ function reservations_main()
       //inputs erstellen zum reservieren
       $res_inputs =
         $type['descr'] . ': <input type="text" name="' . $res_type . '_con" /><br/>
-        Spielername: <input type="text" name="name" /> ';
+        Spielername: <input type="text" name="' . $res_type . '_name" /> ';
 
       //radiobuttons erstellen
-      $selections = explode(",", $type['selections']);
       $res_selects = "";
+
+      $selections = explode(",", $type['selections']);
+
       $reservations_bit = "";
 
       //Reservierungstypen nacheinander durchgehen, sortiert nach Auswahlmöglichkeiten
@@ -1065,7 +1071,7 @@ function reservations_main()
         //ausgabe aufgetrennt nach selection
         $reservations_bituser = "";
 
-        //die dazugehörigen einträge holen
+        //   //die dazugehörigen einträge holen
         $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}') AND enddate >= CURDATE()", array('order_by' => 'content'));
         while ($entry = $db->fetch_array($get_entry)) {
           // Variablen leeren.
@@ -1075,9 +1081,9 @@ function reservations_main()
 
           $eid = $entry['entry_id'];
           $uid = $entry['uid'];
-          //edit/delete/verlängern erstellen
-          if (($thisuser == $entry['uid']) || ($mybb->usergroup['canmodcp'] == 1)) {
-            $delete =  "<a href=\"misc.php?action=reservations&delete=do&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[-]</a>";
+          //     //edit/delete/verlängern erstellen
+          if ((($thisuser == $entry['uid']) && ($thisuser != 0))  || ($mybb->usergroup['canmodcp'] == 1)) {
+            $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[-]</a>";
             $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">[e]</a>";
             $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
 
@@ -1085,9 +1091,11 @@ function reservations_main()
             //Fürs edit radiobuttons
             foreach ($selections as $save) {
               //input für radio button
-              if (trim($save) == trim($entry['selection'])) $check = "CHECKED";
-              else $check = "";
-              $res_selects_edit .= '<input type="radio" name="edit_sel" value="' . $save . '" ' . $check . '/> ' . $save;
+              if ($save != "") {
+                if (trim($save) == trim($entry['selection'])) $check = "CHECKED";
+                else $check = "";
+                $res_selects_edit .= '<input type="radio" name="edit_sel" value="' . $save . '" ' . $check . '/> ' . $save;
+              }
             }
           }
           //userinfos bekommen, wenn kein Gast
@@ -1101,6 +1109,12 @@ function reservations_main()
           $name = $entry['name'];
 
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
+          if ($entry['uid' == 0] && $type['guest_duration'] == 0) {
+            $enddate = "open end";
+          }
+          if ($entry['uid' != 0] && $type['member_duration'] == 0) {
+            $enddate = "open end";
+          }
 
           eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
         }
@@ -1120,9 +1134,9 @@ function reservations_main()
 
     $reservations_bituser = "";
 
-    /** **********************
-     * Anzeige für Moderatoren 
-     * ***********************/
+    // /** **********************
+    //  * Anzeige für Moderatoren 
+    //  * ***********************/
 
     if ($mybb->usergroup['canmodcp'] == 1) {
       //Einträge 
@@ -1148,13 +1162,15 @@ function reservations_main()
 
         eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
       }
+
       eval("\$reservations_main_mod = \"" . $templates->get("reservations_main_mod") . "\";");
     }
 
     //Eintrag speichern
     if (isset($mybb->input['res_save'])) {
-      //infos bekommen
-      $name = $mybb->get_input('name', MYBB::INPUT_STRING);
+
+      //     //infos bekommen
+      $name = $mybb->get_input("{$res_type}_name", MyBB::INPUT_STRING);
       $res_type = $mybb->get_input('type_hid', MyBB::INPUT_STRING);
       $content = $mybb->get_input("{$res_type}_con", MyBB::INPUT_STRING);
 
@@ -1164,12 +1180,12 @@ function reservations_main()
       //Es gab Auswahlmöglichkeiten, der User hat aber nichts ausgewählt
       if ($type_opt['selections'] != "" && $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING) == "") {
         error("Du hast keine Auswahloption gewählt.", "Reservierung nicht möglich.");
-        die();
       }
+
       //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
 
-      // alles gut, der User darf. 
+      //     // alles gut, der User darf. 
       if ($check[0]) {
         if ($thisuser == 0) {
           $duration = $type_opt['guest_duration'];
@@ -1192,34 +1208,29 @@ function reservations_main()
           "lastupdate" => date("Y-m-d"),
         );
 
-        //Der Hauptaccount von Moderatoren bekommt einen Alert 
-        if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
-          $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
-          while ($get_mod = $db->fetch_array($get_mods_q)) {
-            $touid = $get_mod['uid'];
-            if (is_member(4, $touid)) {
-              if ($uid != 0) {
-                $user = get_user($uid);
-                $fromuser = build_profile_link($user['username'], $uid);
-              } else {
-                $fromuser = "Gast";
-              }
-              $alertType = MybbStuff_MyAlerts_AlertTypeManager::getInstance()->getByCode('reservations_newEntry');
-              if ($alertType != NULL && $alertType->getEnabled() && $thisuser != $touid) {
-                $alert = new MybbStuff_MyAlerts_Entity_Alert((int)$touid, $alertType);
-                $alert->setExtraDetails([
-                  'type' => $res_type,
-                  'fromuser' => $fromuser,
-                  'name' => $name
-                ]);
-                MybbStuff_MyAlerts_AlertManager::getInstance()->addAlert($alert);
-              }
-            }
+        //Der Hauptaccount von Moderatoren bekommt eine Benachrichtigung
+
+        $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
+        $moduids = ",";
+        while ($get_mod = $db->fetch_array($get_mods_q)) {
+
+          if (is_member(4, $get_mod['uid'])) {
+            $moduids .= $get_mod['uid'] . ",";
           }
-          // var_dump($alert);
         }
         //speichern
         $db->insert_query("reservationsentry", $insert);
+
+        $databasename = $db->fetch_field($db->write_query("SELECT DATABASE()"), "DATABASE()");
+        $lastId = $db->fetch_field($db->write_query("SELECT AUTO_INCREMENT FROM information_schema.TABLES 
+        WHERE TABLE_SCHEMA = '" . $databasename . "' AND TABLE_NAME = '" . TABLE_PREFIX . "reservationsentry'"), "AUTO_INCREMENT");
+
+        $insert_mod = array(
+          "notread_uids" => $moduids,
+          "entry_id" => $lastId,
+        );
+        $db->insert_query("reservationsmodread", $insert_mod);
+
         redirect("misc.php?action=reservations");
       } else {
         error($check[1], "Reservierung nicht möglich");
@@ -1228,12 +1239,28 @@ function reservations_main()
     }
 
     //eintrag löschen
-    if ($mybb->input['delete'] == "do_delete") {
-
-      $entry = $mybb->get_input('id', MyBB::INPUT_INT);
+    if ($mybb->input['do_delete'] === "do_delete") {
+      $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
-      if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
-        $db->delete_query('reservationsentry', "entry_id = {$entry}");
+
+      $today = date("Y-m-d");
+
+      // echo "bla" . $entry . "uid ist" . $uid;
+      if ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1) {
+        $update = array(
+          "enddate" => date("Y-m-d", strtotime($today . " - 1 days")),
+          "lastupdate" => date("Y-m-d"),
+        );
+
+        $db->update_query("reservationsentry", $update, "entry_id = {$entryid}");
+        redirect("misc.php?action=reservations");
+      }
+      die();
+    }
+    if ($mybb->input['do_delete'] === "mod_delete") {
+      if ($mybb->usergroup['canmodcp'] == 1) {
+        $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
+        $db->delete_query('reservationsentry', "entry_id = {$entryid}");
         redirect("misc.php?action=reservations");
       }
     }
@@ -1330,8 +1357,67 @@ function reservations_alert()
     $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
     eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
   }
-  if ($db->num_rows($entry) > 0) {
+  /**
+   * Anzeige für Moderatoren, wenn es neue Einträge gibt
+   */
+  if ($mybb->usergroup['canmodcp'] == 1) {
+    $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
+    $modflag = false;
+    $testmod = false;
+    while ($modentry = $db->fetch_array($querymodentry)) {
+      //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
+      //erst einmal alle angehangen charas des users bekommen
+      $charas = reserverations_get_allchars($thisuser);
+      //diese durchgehen
+      foreach ($charas as $uid => $name) {
+        //testen ob eine der uids im notread string ist
+        if (strpos($modentry['notread_uids'], "," . $uid . ",") !== false) {
+          //indem fall gibt es einen eintrag den wir anzeigen wollen.
+          $modflag = true;
+          $testmod = true;
+        }
+        //deswegen holen wir dazu jetzt den reserveriungseintrag und die Infos dazu.
+        if ($modflag == true) {
+          $getentry = $db->simple_select("reservationsentry", "*", "entry_id= {$modentry['entry_id']}");
+          $entrymod = $db->fetch_array($getentry);
 
+          $modentry['entry_id'];
+          if ($entrymod['uid'] != 0) {
+            $user = get_user($entrymod['uid']);
+            $userlink =  "(" . build_profile_link($user['username'], $entrymod['uid']) . ")";
+          } else {
+            $userlink = "";
+          }
+        }
+        //template ausgeben
+
+      }
+      if ($testmod) {
+        eval("\$reservations_indexmodnewentry .= \"" . $templates->get("reservations_indexmodnewentry") . "\";");
+      }
+    }
+  }
+
+  //Moderatoren wollen die Meldung als gelesen markieren
+  if ($mybb->input['action'] == "markread") {
+    $id = $mybb->get_input('mark', MyBB::INPUT_INT);
+    $modstring = $db->fetch_field($db->simple_select("reservationsmodread", "notread_uids", "id = {$id}"), "notread_uids");
+    //alle charas des users bekommen
+    $allcharas = reserverations_get_allchars($thisuser);
+    foreach ($allcharas as $uid => $name) {
+      //wenn er die userid finden, löschen
+      $modstring = str_replace("," . $uid . ",", ",", $modstring);
+    }
+
+    $modstring = str_replace("," . $thisuser . ",", ",", $modstring);
+    $update = array(
+      "notread_uids" => $modstring,
+    );
+    $db->update_query("reservationsmodread", $update, "id='{$id}'");
+    redirect("index.php");
+  }
+
+  if ($db->num_rows($entry) > 0 || $modflag == true) {
     eval("\$reservations_indexalert = \"" . $templates->get("reservations_indexalert") . "\";");
   }
 }
@@ -1345,9 +1431,9 @@ function reservations_check($thisuser, $res_type, $content)
   global $db;
   $check = array();
   $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
-  $type_lock = $type_opt['member_lock'];
-  $type_max = $type_opt['member_max'];
-  $opt_ext_max = $type_opt['member_extendcnt'];
+  $type_lock = $type_opt['member_lock']; //darf das mitglied den gleichen eintrag wieder machen? Sperre
+  $type_max = $type_opt['member_max'];  //wie viele einträge darf das mitglied haben (z.b. 3 avapersonen)
+  $opt_ext_max = $type_opt['member_extendcnt']; //Wie oft darf ein Mitglied verlängern  (3x verlängern)
 
   $fid = $type_opt['pfid'];
   $check[0] = true;
@@ -1404,7 +1490,7 @@ function reservations_check($thisuser, $res_type, $content)
         }
         // member_extendcnt
         $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
-        if ($summe >= $opt_ext_max) {
+        if ($opt_ext_max > 0 && $summe >= $opt_ext_max) {
           $check[0] = false;
           $check[1] = "Du hast das erlaubte Maximum der Reservierungen dieser Art erreicht.";
           return $check;
@@ -1440,75 +1526,4 @@ function reserverations_get_allchars($thisuser)
     $charas[$uid] = $users['username'];
   }
   return $charas;
-}
-
-
-/**************************** 
- * 
- *  My Alert Integration
- * 
- * *************************** */
-if (class_exists('MybbStuff_MyAlerts_AlertTypeManager')) {
-  $plugins->add_hook("global_start", "reservations_myAlert");
-}
-
-function reservations_myAlert()
-{
-  global $mybb, $lang;
-  $lang->load('reservations');
-  // echo "im alert ding drinnen";
-  /**
-   * We need our MyAlert Formatter
-   * Alert Formater for New Entry in reservations
-   */
-
-  class MybbStuff_MyAlerts_Formatter_ReservationsNewEntryFormatter extends MybbStuff_MyAlerts_Formatter_AbstractFormatter
-  {
-    /**
-     * Build the output string for listing page and the popup.
-     * @param MybbStuff_MyAlerts_Entity_Alert $alert The alert to format.
-     * @return string The formatted alert string.
-     */
-    public function formatAlert(MybbStuff_MyAlerts_Entity_Alert $alert, array $outputAlert)
-    {
-      $alertContent = $alert->getExtraDetails();
-      return $this->lang->sprintf(
-        $this->lang->reservations_newEntry,
-        $outputAlert['from_user'],
-        $alertContent['name'],
-        $alertContent['type']
-      );
-    }
-    /**
-     * Initialize the language, we need the variables $l['myalerts_setting_alertname'] for user cp! 
-     * and if need initialize other stuff
-     * @return void
-     */
-    public function init()
-    {
-      if (!$this->lang->reservations) {
-        $this->lang->load('reservations');
-      }
-    }
-    /**
-     * We want to define where we want to link to. 
-     * @param MybbStuff_MyAlerts_Entity_Alert $alert for which alert.
-     * @return string return the link.
-     */
-    public function buildShowLink(MybbStuff_MyAlerts_Entity_Alert $alert)
-    {
-      var_dump($alert);
-      $alertContent = $alert->getExtraDetails();
-      return $this->mybb->settings['bburl'] . '/misc.php?action=reservations';
-    }
-  }
-  if (class_exists('MybbStuff_MyAlerts_AlertFormatterManager')) {
-    $formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::getInstance();
-    if (!$formatterManager) {
-      $formatterManager = MybbStuff_MyAlerts_AlertFormatterManager::createInstance($mybb, $lang);
-    }
-    $formatterManager->registerFormatter(
-      new MybbStuff_MyAlerts_Formatter_ReservationsNewEntryFormatter($mybb, $lang, 'reservations_newEntry')
-    );
-  }
 }
