@@ -1166,9 +1166,9 @@ function reservations_main()
     if (isset($mybb->input['res_save'])) {
 
       //     //infos bekommen
-      $name = $mybb->get_input("{$res_type}_name", MyBB::INPUT_STRING);
       $res_type = $mybb->get_input('type_hid', MyBB::INPUT_STRING);
       $content = $mybb->get_input("{$res_type}_con", MyBB::INPUT_STRING);
+      $name = $mybb->get_input("{$res_type}_name", MyBB::INPUT_STRING);
 
       //entsprechende infos zur liste bekommen
       $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
