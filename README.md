@@ -26,5 +26,4 @@ Plugin installieren.
 2. Einstellen welche Reservierung als Defaulttab angezeigt werden soll. 
     Einstellungen -> Reservierung. 
 3. Listentypen sind erreichbar über misc.php?action=reservations.  
-    -> Konfiguration -> Reservierungen. 
 
