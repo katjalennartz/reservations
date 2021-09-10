@@ -8,10 +8,6 @@ if (!defined("IN_MYBB")) {
 }
 
 
-//TODO ALLE EINSTELLUNGEN BERÜCKSICHTIGT?????
-//TODO Lock überprüfen! 
-//TODO löschen von member nur enddate ändern
-//TODO mods richtig löschen
 function reservations_info()
 {
   global $lang;
