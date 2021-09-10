@@ -7,6 +7,8 @@ Es wird eine Seite generiert, auf der die verschiedenen Typen zu finden sind und
 
 Moderatoren können auch abgelaufene Reservierungen einsehen und löschen.  
 
+Moderatoren werden über einen Hinweis auf der Indexseite darüber informiert, wenn es einen neuen Eintrag gibt
+
 Es gibt einen Task der die Tabelle regelmäßig selbstständig aufräumt und alte Einträge löscht.  
 
 
@@ -24,23 +26,3 @@ Plugin installieren.
 3. Listentypen sind erreichbar über misc.php?action=reservations.  
     -> Konfiguration -> Reservierungen. 
 
-# Erweitert 
-Wenn ihr wollt, dasss nur Moderatoren in ihren Alertsettings die Einstellungen sehen können, ob sie einen Alert für neue Reservierungen bekommen oder nicht, könnt ihr folgende Änderung händisch durchführen:
-
-/alerts.php
-suche nach:  
-				`eval("\$alertSettings .= \"" . $templates->get(
-						'myalerts_setting_row'
-					) . "\";");`
-                    
-ersetzen mit:  
-			`	if ($key == 'reservations_newEntry' && !is_member(4, $mybb->user['uid'])) {
-					$alertSettings .= "";
-				} else {
-					eval("\$alertSettings .= \"" . $templates->get(
-						'myalerts_setting_row'
-					) . "\";");
-				}
-                `
-		  
-wobei 4 hier die Administratorgruppe ist, evt. müsst ihr das für eure Moderatoren anpassen. 
