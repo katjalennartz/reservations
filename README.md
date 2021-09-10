@@ -5,6 +5,8 @@ Für jeden Typen können verschiedene Einstellungsmöglichkeiten festgelegt werd
 
 Es wird eine Seite generiert, auf der die verschiedenen Typen zu finden sind und User Reservierungen vornehmen können. Eigene Einträge können verlängert/gelöscht/editiert werden.  
 
+Es kann eingestellt werden, ob die Reservierungen untereinander oder als Tabs dargestellt werden.
+
 Moderatoren können auch abgelaufene Reservierungen einsehen und löschen.  
 
 Moderatoren werden über einen Hinweis auf der Indexseite darüber informiert, wenn es einen neuen Eintrag gibt
