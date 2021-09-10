@@ -174,12 +174,15 @@ function reservations_install()
     "template" => '<div class="res_bit">
     <strong>{$entry[\\\'content\\\']}</strong> -  für {$name}{$userlink} bis {$enddate} {$edit} {$delete} {$extend}
     <div class="modal" id="edit_{$eid}" style="display: none; padding: 10px; margin: auto; text-align: center;">
-      <form method="post" action="misc.php?action=reservations&type={$res_type}" id="edit_{$res_type}">
+      <form method="post" action="misc.php?action=reservations&type={$res_type}" id="edit{$entry[\\\'entry_id\\\']}">
         {$res_selects_edit}
       <input type="hidden" name="edit" value="{$entry[\\\'entry_id\\\']}"/> 
-      <br/>{$type[\\\'descr\\\']}: <input type="text" value="{$entry[\\\'content\\\']}" name="edit_content"/> <br />
-      Name: <input type="text" value="{$entry[\\\'name\\\']}" name="edit_name"/><br />
-      <button form="edit_{$res_type}" type="submit" value="speichern" name="edit_save" />
+      <input type="hidden" name="restype" value="{$res_type}"/> 
+
+		 <br/>{$type[\\\'descr\\\']}: <input type="text" value="{$entry[\\\'content\\\']}" name="editcontent"/> <br />
+      Name: <input type="text" value="{$entry[\\\'name\\\']}" name="editname"/><br />
+		  <button form="edit{$entry[\\\'entry_id\\\']}" type="submit" value="speichern" name="edit_save">speichern</buttons>
+
       </form>
     </div>
   </div>
@@ -1090,7 +1093,7 @@ function reservations_main()
               if ($save != "") {
                 if (trim($save) == trim($entry['selection'])) $check = "CHECKED";
                 else $check = "";
-                $res_selects_edit .= '<input type="radio" name="edit_sel" value="' . $save . '" ' . $check . '/> ' . $save;
+                $res_selects_edit .= '<input type="radio" name="editsel" value="' . $save . '" ' . $check . '/> ' . $save;
               }
             }
           }
@@ -1298,10 +1301,13 @@ function reservations_main()
 
     //Editieren
     if (isset($mybb->input['edit_save'])) {
+      $res_type = $mybb->get_input('res_type', MyBB::INPUT_STRING);
+     
       $entry = $mybb->get_input('edit', MyBB::INPUT_INT);
-      $name = $mybb->get_input('edit_name', MyBB::INPUT_STRING);
-      $content = $mybb->get_input('edit_content', MyBB::INPUT_STRING);
-      $selection = $mybb->get_input('edit_sel', MyBB::INPUT_STRING);
+
+      $name = $mybb->get_input("editname", MyBB::INPUT_STRING);
+      $content = $mybb->get_input("editcontent", MyBB::INPUT_STRING);
+      $selection = $mybb->get_input("editsel", MyBB::INPUT_STRING);
 
       $update = array(
         "name" => $name,
@@ -1312,6 +1318,7 @@ function reservations_main()
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
         $db->update_query("reservationsentry", $update, "entry_id = {$entry}");
         redirect("misc.php?action=reservations");
+        die();
       }
     }
     if ($res_tab) {
