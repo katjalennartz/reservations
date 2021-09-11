@@ -76,7 +76,7 @@ function reservations_install()
   // Tabelle für Benachrichtigung
   $db->query("CREATE TABLE " . TABLE_PREFIX . "reservationsmodread (
     `id` int(11) NOT NULL AUTO_INCREMENT,
-    `notread_uids` int(11) NOT NULL,
+    `notread_uids` varchar(255) NOT NULL,
     `entry_id` int(11) NOT NULL,
     PRIMARY KEY (`id`)
      ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
