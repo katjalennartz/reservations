@@ -1302,7 +1302,7 @@ function reservations_main()
     //Editieren
     if (isset($mybb->input['edit_save'])) {
       $res_type = $mybb->get_input('res_type', MyBB::INPUT_STRING);
-     
+
       $entry = $mybb->get_input('edit', MyBB::INPUT_INT);
 
       $name = $mybb->get_input("editname", MyBB::INPUT_STRING);
@@ -1366,14 +1366,14 @@ function reservations_alert()
   if ($mybb->usergroup['canmodcp'] == 1) {
     $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
     $modflag = false;
-    $testmod = false;
+
+    $charas = reserverations_get_allchars($thisuser);
     while ($modentry = $db->fetch_array($querymodentry)) {
       //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
       //erst einmal alle angehangen charas des users bekommen
-      $charas = reserverations_get_allchars($thisuser);
       //diese durchgehen
+      $testmod = false;
       foreach ($charas as $uid => $name) {
-        //testen ob eine der uids im notread string ist
         if (strpos($modentry['notread_uids'], "," . $uid . ",") !== false) {
           //indem fall gibt es einen eintrag den wir anzeigen wollen.
           $modflag = true;
@@ -1408,11 +1408,12 @@ function reservations_alert()
     //alle charas des users bekommen
     $allcharas = reserverations_get_allchars($thisuser);
     foreach ($allcharas as $uid => $name) {
+
       //wenn er die userid finden, löschen
       $modstring = str_replace("," . $uid . ",", ",", $modstring);
     }
-
     $modstring = str_replace("," . $thisuser . ",", ",", $modstring);
+
     $update = array(
       "notread_uids" => $modstring,
     );
