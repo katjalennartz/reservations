@@ -222,7 +222,7 @@ function reservations_install()
     "template" => '
     <html>
 	<head>
-    <title>{$mybb->settings[\\\'bbname\\\']} - {$lang->lists}</title>
+    <title>{$mybb->settings[\\\'bbname\\\']} - Reservierungen</title>
 		{$headerinclude}
 	</head>
 	<body>
@@ -281,7 +281,8 @@ function reservations_install()
     "title" => 'reservations_main_mod',
     "template" => '<div class="res_mod">
     <h1>Moderatoren Verwaltung - abgelaufene Reservierungen</h1>
-  <p>Achtung, wenn ihr einen Eintrag löscht, kann er nicht mehr berücksichtig werden in Bezug auf den Sperrzeitraum. Also für den Fall, dass ein User die gleiche Reservierung einen bestimmten Zeitraum nicht noch einmal tätigen darf. Einträge sollten erst aus der Datenbank gelöscht werden, wenn dieser Zeitraum abgelaufen ist.<br /> 
+  <p>Achtung, wenn ihr einen Eintrag manuell als Moderator löscht, wird er vom eingestellten <i>Sperrzeitraum</i> nicht mehr berücksichtigt! (Konfiguration > Reservierungen > Reservierungstyp > Zeitraum für Sperre) 
+  Daher (falls ihr mit einer Sperrfrist arbeitet): Erst löschen, nachdem sowohl die Reservierungfrist, als auch der Sperrzeitraum vollständig abgelaufen sind.<br /> 
     Es gibt einen Task der die Reservierungen automatisch aufräumt, das hier ist also nur für Ausnahmen nötig ;)  .<br /></p>
   <div class="res_mod_bit">
 	{$reservations_main_modbit}
@@ -297,7 +298,7 @@ function reservations_install()
     "template" => '<span class="res_us"><strong>- {$entry[\\\'type\\\']}:</strong>
     {$entry[\\\'content\\\']} für {$name}{$userlink}- ausgelaufen am {$enddate}. <br />
     Frist für erneutes Reservieren endet am: {$newdate}.
-    <a href="misc.php?action=reservations&do_delete=mod_delete&id={$eid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
+    <a href="misc.php?action=reservations&do_delete=mod_delete&id={$deleteid}&uid={$uid}" onClick="return confirm(\\\'Möchtest du den Eintrag wirklich löschen?\\\');">[endgültig löschen]</a>
     </span>',
     "sid" => "-2",
     "version" => "1.0",
@@ -1146,6 +1147,8 @@ function reservations_main()
         //Das Enddatum bekommen
         $enddate =  date("d.m.Y", strtotime($entry['enddate'])); // enddate + frist;
         //umwandeln 
+        $deleteid = $entry['entry_id'];
+        $name =  $entry['name'];
         $newdate = strtotime($enddate);
         //Sperrzeitraum dazurechnen
         $newdate = strtotime("+{$lockdays} day", $newdate);
@@ -1226,7 +1229,7 @@ function reservations_main()
 
         $insert_mod = array(
           "notread_uids" => $moduids,
-          "entry_id" => $lastId,
+          "entry_id" => $lastId - 1,
         );
         $db->insert_query("reservationsmodread", $insert_mod);
 
@@ -1256,12 +1259,15 @@ function reservations_main()
       }
       die();
     }
-    if ($mybb->input['do_delete'] === "mod_delete") {
+    if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
+        echo "ist". $entryid;
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
-        redirect("misc.php?action=reservations");
+        // redirect("misc.php?action=reservations");
+        die();
       }
+
     }
 
     //eintrag verlängern
