@@ -222,7 +222,7 @@ function reservations_install()
     "template" => '
     <html>
 	<head>
-    <title>{$mybb->settings[\\\'bbname\\\']} - Reservierungen</title>
+    <title>{$mybb->settings[\\\'bbname\\\']} - {$lang->reservations}</title>
 		{$headerinclude}
 	</head>
 	<body>
@@ -1016,8 +1016,10 @@ function reservations_admin_load()
 $plugins->add_hook("misc_start", "reservations_main");
 function reservations_main()
 {
-  global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser;
-
+  global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser, $lang;
+  
+  $lang->load('reservations');
+  add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
     $thisuser = $mybb->user['uid'];

@@ -2,7 +2,7 @@
 $l['reservations_name'] = "Reservierungsplugin von Risuena";
 
 $l['reservations_descr'] = "Automatische Reservierungen aller Art bequem im ACP anlegen";
-$l['reservations_permission_type'] = "Darf Reservierungdtypen anlegen?";
+$l['reservations_permission_type'] = "Darf Reservierungstypen anlegen?";
 
 $l['reservations_menu'] = "Reservierungen";
 
@@ -87,6 +87,3 @@ $l['reservations_delete_success'] = "Erfolgreich gelöscht.";
 $l['reservations_delete_ask'] = "Soll die Reservierung wirklich gelöscht werden?";
 
 $l['reservations_error_delete'] = "Der Typ konnte nicht gelöscht werden.";
-// $mybb->input['type']
-
-// // reservations_create_type
