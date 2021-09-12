@@ -533,6 +533,7 @@ function reservations_activate()
   //VARIABLEN IN TEMPLATES EINFÜGEN
   include MYBB_ROOT . "/inc/adminfunctions_templates.php";
   find_replace_templatesets("index", "#" . preg_quote('{$header}') . "#i", '{$header}{$reservations_indexalert}');
+  change_admin_permission('config', 'reservations', 1);
 }
 
 function reservations_deactivate()
