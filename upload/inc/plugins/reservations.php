@@ -1329,9 +1329,10 @@ function reservations_main()
     if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
-        echo "ist" . $entryid;
+        // echo "ist" . $entryid;
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
-        // redirect("misc.php?action=reservations");
+        $db->delete_query('reservationsmodread', "entry_id = {$entryid}");
+        redirect("misc.php?action=reservations");
         die();
       }
     }
