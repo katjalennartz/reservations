@@ -1076,7 +1076,7 @@ function reservations_main()
 
         //   //die dazugehörigen einträge holen
         // $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}') AND (enddate >= CURDATE() OR (member_duration = 0 OR guest_duration = 0))", array('order_by' => 'content'));
-        $get_entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE type = '{$res_type}' AND trim(selection) = trim('{$sel}') ORDER BY 'content'");
+        $get_entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE type = '{$res_type}' AND trim(selection) = trim('{$sel}') ORDER BY content");
 
         while ($entry = $db->fetch_array($get_entry)) {
 
@@ -1181,7 +1181,7 @@ function reservations_main()
 
       while ($entry = $db->fetch_array($get_entry)) {
         //wieviele tage muss der User warten, bis er wieder reservieren darf
-        $$type = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$entry['type']}'"));
+        $type = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$entry['type']}'"));
 
         $lockdays = $type['member_lock'];
         //Das Enddatum bekommen
