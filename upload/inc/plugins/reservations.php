@@ -1018,7 +1018,7 @@ $plugins->add_hook("misc_start", "reservations_main");
 function reservations_main()
 {
   global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser, $lang;
-  
+
   $lang->load('reservations');
   add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
   //Reservierungsseite
@@ -1075,8 +1075,11 @@ function reservations_main()
         $reservations_bituser = "";
 
         //   //die dazugehörigen einträge holen
-        $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}') AND enddate >= CURDATE()", array('order_by' => 'content'));
+        // $get_entry = $db->simple_select("reservationsentry", "*", "type = '{$res_type}' AND trim(selection) = trim('{$sel}') AND (enddate >= CURDATE() OR (member_duration = 0 OR guest_duration = 0))", array('order_by' => 'content'));
+        $get_entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE type = '{$res_type}' AND trim(selection) = trim('{$sel}') ORDER BY 'content'");
+
         while ($entry = $db->fetch_array($get_entry)) {
+
           // Variablen leeren.
           $delete =  "";
           $edit = "";
@@ -1112,14 +1115,44 @@ function reservations_main()
           $name = $entry['name'];
 
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
-          if ($entry['uid' == 0] && $type['guest_duration'] == 0) {
+          $today = date("d.m.Y");
+
+          if ($type['member_duration'] != 0 && $type['guest_duration'] != 0) {
+            //beide nicht unendlich
+            if ($enddate >= $today) {
+              eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+            }
+          } else if ($type['member_duration'] != 0 && $type['guest_duration'] == 0) {
+            // wenn eintrag von gast dann enddate
+            if ($uid == 0) {
+              //guest unendlich
+              $enddate = "open end";
+              eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+            } else { //wenn eintrag von user dann immer
+              //enddate > als heute?
+              if ($enddate >= $today) {
+                eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+              }
+            }
+          } else if ($type['member_duration'] == 0 && $type['guest_duration'] != 0) {
+            //member unendlich, guest nicht 
+            if ($uid != 0) {
+              $enddate = "open end";
+              eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+            } else {
+              if ($enddate >= $today) {
+                eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+              }
+            }
+            // 
+
+          } else { // nur anzeigen wenn das enddatum noch noch nicht erreicht ist
+            //beide unendlich also alles ausspucken
             $enddate = "open end";
-          }
-          if ($entry['uid' != 0] && $type['member_duration'] == 0) {
-            $enddate = "open end";
+            eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
           }
 
-          eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
+          // eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
         }
         eval("\$reservations_bit .= \"" . $templates->get("reservations_bit") . "\";");
       }
@@ -1144,9 +1177,13 @@ function reservations_main()
     if ($mybb->usergroup['canmodcp'] == 1) {
       //Einträge 
       $get_entry = $db->simple_select("reservationsentry", "*", "enddate < CURDATE()", array('order_by' => 'type, content'));
+
+
       while ($entry = $db->fetch_array($get_entry)) {
         //wieviele tage muss der User warten, bis er wieder reservieren darf
-        $lockdays = $db->fetch_field($db->simple_select("reservationstype", "member_lock", "type = '{$entry['type']}'"), "member_lock");
+        $$type = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$entry['type']}'"));
+
+        $lockdays = $type['member_lock'];
         //Das Enddatum bekommen
         $enddate =  date("d.m.Y", strtotime($entry['enddate'])); // enddate + frist;
         //umwandeln 
@@ -1165,7 +1202,34 @@ function reservations_main()
           $userlink = "";
         }
 
-        eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+        if ($type['member_duration'] != 0 && $type['guest_duration'] != 0) {
+          //anzeigen
+          if ($enddate < $today) {
+            eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+          }
+        } else if ($type['member_duration'] != 0 && $type['guest_duration'] == 0) {
+          if ($uid == 0) {
+            //guest unendlich
+            //nie anzeigen
+          } else {
+            //member nicht unendlich
+            if ($enddate < $today) {
+              eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+            }
+          }
+        } else if ($type['member_duration'] == 0 && $type['guest_duration'] != 0) {
+          //member unendlich, guest nicht 
+          if ($uid != 0) {
+            //member unendlich
+          } else {
+            //gast nicht unendlich
+            if ($enddate < $today) {
+              eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
+            }
+          }
+        } else { //member 0 und gast 0
+          //beide unendlich nie anzeigen
+        }
       }
 
       eval("\$reservations_main_mod = \"" . $templates->get("reservations_main_mod") . "\";");
@@ -1265,12 +1329,11 @@ function reservations_main()
     if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
-        echo "ist". $entryid;
+        echo "ist" . $entryid;
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
         // redirect("misc.php?action=reservations");
         die();
       }
-
     }
 
     //eintrag verlängern
@@ -1358,7 +1421,16 @@ function reservations_alert()
   $thisuser = $mybb->user['uid'];
   $charas = reserverations_get_allchars($thisuser);
   $charastring = implode(",", array_keys($charas));
-  $entry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsentry WHERE uid IN ({$charastring}) AND DATEDIFF(enddate, CURDATE()) <= {$days} ORDER BY uid, type");
+  //SELECT e.*, t.member_duration, DATEDIFF(enddate, CURDATE()) as date FROM mybb_reservationsentry e LEFT JOIN mybb_reservationstype t ON e.type = t.type WHERE ( 
+  //     uid IN (2475,3333) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
+  //     ) AND (DATEDIFF(enddate, CURDATE()) <= 6)
+  //     AND member_duration != 0
+  // ORDER BY uid, e.type
+  $entry = $db->write_query("SELECT e.*, t.member_duration FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
+            WHERE (uid IN ({$charastring}) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
+                 ) AND (DATEDIFF(enddate, CURDATE()) <= {$days} )
+                 AND member_duration != 0
+             ORDER BY uid, e.type");
 
   while ($thisentry = $db->fetch_array($entry)) {
     $eid = $thisentry['entry_id'];
@@ -1377,6 +1449,7 @@ function reservations_alert()
     $modflag = false;
 
     $charas = reserverations_get_allchars($thisuser);
+    $reservations_indexmodnewentry ="";
     while ($modentry = $db->fetch_array($querymodentry)) {
       //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
       //erst einmal alle angehangen charas des users bekommen
