@@ -1089,7 +1089,7 @@ function reservations_main()
           $uid = $entry['uid'];
           //     //edit/delete/verlängern erstellen
           if ((($thisuser == $entry['uid']) && ($thisuser != 0))  || ($mybb->usergroup['canmodcp'] == 1)) {
-            $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[-]</a>";
+            $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[x]</a>";
             $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">[e]</a>";
             $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
 
@@ -1313,23 +1313,34 @@ function reservations_main()
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
 
       $today = date("Y-m-d");
+      $typ = $db->fetch_field($db->simple_select("reservationsentry", "type", "entry_id = {$entryid}"), "type");
+      $typedata = $db->fetch_array($db->simple_select("reservationstype", "type", "type = '{$typ}'"));
+      $end_guest = $typedata['guest_duration'];
+      $end_member = $typedata['member_duration'];
 
-      // echo "bla" . $entry . "uid ist" . $uid;
       if ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1) {
-        $update = array(
-          "enddate" => date("Y-m-d", strtotime($today . " - 1 days")),
-          "lastupdate" => date("Y-m-d"),
-        );
+        if ($end_guest == 0 && $mybb->usergroup['canmodcp'] == 1) {
+          $db->delete_query("reservationsentry", "entry_id = {$entryid}");
+          redirect("misc.php?action=reservations");
+        } elseif ($end_member == 0) {
+          $db->delete_query("reservationsentry", "entry_id = {$entryid}");
+          redirect("misc.php?action=reservations");
+        } else {
+          $update = array(
+            "enddate" => date("Y-m-d", strtotime($today . " - 1 days")),
+            "lastupdate" => date("Y-m-d"),
+          );
 
-        $db->update_query("reservationsentry", $update, "entry_id = {$entryid}");
-        redirect("misc.php?action=reservations");
+          $db->update_query("reservationsentry", $update, "entry_id = {$entryid}");
+          redirect("misc.php?action=reservations");
+        }
       }
       die();
     }
     if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
-        // echo "ist" . $entryid;
+
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
         $db->delete_query('reservationsmodread', "entry_id = {$entryid}");
         redirect("misc.php?action=reservations");
@@ -1450,7 +1461,7 @@ function reservations_alert()
     $modflag = false;
 
     $charas = reserverations_get_allchars($thisuser);
-    $reservations_indexmodnewentry ="";
+    $reservations_indexmodnewentry = "";
     while ($modentry = $db->fetch_array($querymodentry)) {
       //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
       //erst einmal alle angehangen charas des users bekommen
@@ -1537,6 +1548,16 @@ function reservations_check($thisuser, $res_type, $content)
   if ($fid != 0) {
     $testfid = $db->simple_select("userfields", "*", "trim(lower(fid{$fid})) like trim(lower('{$content}'))");
     if ($db->num_rows($testfid) > 0) {
+      $check[0] = false;
+      $check[1] = "Es gibt schon einen solchen Eintrag von einem der Mitglieder.";
+      return $check;
+    }
+  }
+
+  //hat irgendeinuser das im profilfeld eingetragen? 
+  if ($res_type == "character") {
+    $testusername = $db->simple_select("users", "*", "trim(lower(username)) like trim(lower('{$content}'))");
+    if ($db->num_rows($testusername) > 0) {
       $check[0] = false;
       $check[1] = "Es gibt schon einen solchen Eintrag von einem der Mitglieder.";
       return $check;
