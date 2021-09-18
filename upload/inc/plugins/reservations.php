@@ -1117,9 +1117,16 @@ function reservations_main()
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
           $today = date("d.m.Y");
 
+          $showflag = false;
+          $testenddate =  date("Y-m-d", strtotime($entry['enddate']));
+          $testtoday = date("Y-m-d");
+          if ($testenddate >= $testtoday) {
+            $showflag = true;
+          }
+
           if ($type['member_duration'] != 0 && $type['guest_duration'] != 0) {
             //beide nicht unendlich
-            if ($enddate >= $today) {
+            if ($showflag) {
               eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
             }
           } else if ($type['member_duration'] != 0 && $type['guest_duration'] == 0) {
@@ -1129,8 +1136,9 @@ function reservations_main()
               $enddate = "open end";
               eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
             } else { //wenn eintrag von user dann immer
+
               //enddate > als heute?
-              if ($enddate >= $today) {
+              if ($showflag) {
                 eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
               }
             }
@@ -1140,19 +1148,15 @@ function reservations_main()
               $enddate = "open end";
               eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
             } else {
-              if ($enddate >= $today) {
+              if ($showflag) {
                 eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
               }
             }
-            // 
-
           } else { // nur anzeigen wenn das enddatum noch noch nicht erreicht ist
             //beide unendlich also alles ausspucken
             $enddate = "open end";
             eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
           }
-
-          // eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
         }
         eval("\$reservations_bit .= \"" . $templates->get("reservations_bit") . "\";");
       }
@@ -1194,6 +1198,15 @@ function reservations_main()
         $newdate = strtotime("+{$lockdays} day", $newdate);
         //Hier haben wir unser Datum, wann der User wieder darf
         $newdate = date('d.m.Y', $newdate);
+
+        //dates zum testen ob angezeigt werden soll
+        $showflag = false;
+        $testenddate =  date("Y-m-d", strtotime($entry['enddate']));
+        $testtoday = date("Y-m-d");
+        if ($testenddate < $testtoday) {
+          $showflag = true;
+        }
+
         //userinfos bekommen
         if ($entry['uid'] != 0) {
           $user = get_user($entry['uid']);
@@ -1204,7 +1217,7 @@ function reservations_main()
 
         if ($type['member_duration'] != 0 && $type['guest_duration'] != 0) {
           //anzeigen
-          if ($enddate < $today) {
+          if ($showflag) {
             eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
           }
         } else if ($type['member_duration'] != 0 && $type['guest_duration'] == 0) {
@@ -1213,7 +1226,7 @@ function reservations_main()
             //nie anzeigen
           } else {
             //member nicht unendlich
-            if ($enddate < $today) {
+            if ($showflag) {
               eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
             }
           }
@@ -1223,7 +1236,7 @@ function reservations_main()
             //member unendlich
           } else {
             //gast nicht unendlich
-            if ($enddate < $today) {
+            if ($showflag) {
               eval("\$reservations_main_modbit .= \"" . $templates->get("reservations_main_modbit") . "\";");
             }
           }
