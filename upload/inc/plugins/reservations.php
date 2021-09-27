@@ -1327,15 +1327,19 @@ function reservations_main()
 
       $today = date("Y-m-d");
       $typ = $db->fetch_field($db->simple_select("reservationsentry", "type", "entry_id = {$entryid}"), "type");
-      $typedata = $db->fetch_array($db->simple_select("reservationstype", "type", "type = '{$typ}'"));
+      $typedata = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$typ}'"));
+      var_dump($typedata);
       $end_guest = $typedata['guest_duration'];
+      echo  "end_guest;" . $end_guest;
       $end_member = $typedata['member_duration'];
 
       if ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1) {
         if ($end_guest == 0 && $mybb->usergroup['canmodcp'] == 1) {
+          echo "end_guest == 0 && mybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } elseif ($end_member == 0) {
+          echo "end_guest == 0 && ybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } else {
@@ -1437,6 +1441,7 @@ function reservations_alert()
   // Reservierung läuft ab
   // Erst einmal gucken, ob es überhaupt schon Listen/Einträge gibt
 
+
   //Einstellunge bekommen
   $days = $mybb->settings['reservations_days_reminder'];
   //abfangen wenn es noch keine einstellung gibt
@@ -1444,66 +1449,68 @@ function reservations_alert()
     $days = "0";
   }
   $thisuser = $mybb->user['uid'];
-  $charas = reserverations_get_allchars($thisuser);
-  $charastring = implode(",", array_keys($charas));
-  //SELECT e.*, t.member_duration, DATEDIFF(enddate, CURDATE()) as date FROM mybb_reservationsentry e LEFT JOIN mybb_reservationstype t ON e.type = t.type WHERE ( 
-  //     uid IN (2475,3333) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
-  //     ) AND (DATEDIFF(enddate, CURDATE()) <= 6)
-  //     AND member_duration != 0
-  // ORDER BY uid, e.type
-  $entry = $db->write_query("SELECT e.*, t.member_duration FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
+  if ($thisuser != 0) {
+    $charas = reserverations_get_allchars($thisuser);
+    $charastring = implode(",", array_keys($charas));
+    //SELECT e.*, t.member_duration, DATEDIFF(enddate, CURDATE()) as date FROM mybb_reservationsentry e LEFT JOIN mybb_reservationstype t ON e.type = t.type WHERE ( 
+    //     uid IN (2475,3333) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
+    //     ) AND (DATEDIFF(enddate, CURDATE()) <= 6)
+    //     AND member_duration != 0
+    // ORDER BY uid, e.type
+    $entry = $db->write_query("SELECT e.*, t.member_duration FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
             WHERE (uid IN ({$charastring}) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
                  ) AND (DATEDIFF(enddate, CURDATE()) <= {$days} )
                  AND member_duration != 0
              ORDER BY uid, e.type");
 
-  while ($thisentry = $db->fetch_array($entry)) {
-    $eid = $thisentry['entry_id'];
-    $uid = $thisentry['uid'];
-    $res_type = $thisentry['type'];
-    $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
+    while ($thisentry = $db->fetch_array($entry)) {
+      $eid = $thisentry['entry_id'];
+      $uid = $thisentry['uid'];
+      $res_type = $thisentry['type'];
+      $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
 
-    $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
-    eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
-  }
-  /**
-   * Anzeige für Moderatoren, wenn es neue Einträge gibt
-   */
-  if ($mybb->usergroup['canmodcp'] == 1) {
-    $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
-    $modflag = false;
+      $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
+      eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
+    }
+    /**
+     * Anzeige für Moderatoren, wenn es neue Einträge gibt
+     */
+    if ($mybb->usergroup['canmodcp'] == 1) {
+      $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
+      $modflag = false;
 
-    $charas = reserverations_get_allchars($thisuser);
-    $reservations_indexmodnewentry = "";
-    while ($modentry = $db->fetch_array($querymodentry)) {
-      //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
-      //erst einmal alle angehangen charas des users bekommen
-      //diese durchgehen
-      $testmod = false;
-      foreach ($charas as $uid => $name) {
-        if (strpos($modentry['notread_uids'], "," . $uid . ",") !== false) {
-          //indem fall gibt es einen eintrag den wir anzeigen wollen.
-          $modflag = true;
-          $testmod = true;
-        }
-        //deswegen holen wir dazu jetzt den reserveriungseintrag und die Infos dazu.
-        if ($modflag == true) {
-          $getentry = $db->simple_select("reservationsentry", "*", "entry_id= {$modentry['entry_id']}");
-          $entrymod = $db->fetch_array($getentry);
-
-          $modentry['entry_id'];
-          if ($entrymod['uid'] != 0) {
-            $user = get_user($entrymod['uid']);
-            $userlink =  "(" . build_profile_link($user['username'], $entrymod['uid']) . ")";
-          } else {
-            $userlink = "";
+      $charas = reserverations_get_allchars($thisuser);
+      $reservations_indexmodnewentry = "";
+      while ($modentry = $db->fetch_array($querymodentry)) {
+        //Wir haben nur die ID des Hauptaccounts gespeichert. Wollen aber bei allen Charas des Mods eine Anzeige
+        //erst einmal alle angehangen charas des users bekommen
+        //diese durchgehen
+        $testmod = false;
+        foreach ($charas as $uid => $name) {
+          if (strpos($modentry['notread_uids'], "," . $uid . ",") !== false) {
+            //indem fall gibt es einen eintrag den wir anzeigen wollen.
+            $modflag = true;
+            $testmod = true;
           }
-        }
-        //template ausgeben
+          //deswegen holen wir dazu jetzt den reserveriungseintrag und die Infos dazu.
+          if ($modflag == true) {
+            $getentry = $db->simple_select("reservationsentry", "*", "entry_id= {$modentry['entry_id']}");
+            $entrymod = $db->fetch_array($getentry);
 
-      }
-      if ($testmod) {
-        eval("\$reservations_indexmodnewentry .= \"" . $templates->get("reservations_indexmodnewentry") . "\";");
+            $modentry['entry_id'];
+            if ($entrymod['uid'] != 0) {
+              $user = get_user($entrymod['uid']);
+              $userlink =  "(" . build_profile_link($user['username'], $entrymod['uid']) . ")";
+            } else {
+              $userlink = "";
+            }
+          }
+          //template ausgeben
+
+        }
+        if ($testmod) {
+          eval("\$reservations_indexmodnewentry .= \"" . $templates->get("reservations_indexmodnewentry") . "\";");
+        }
       }
     }
   }
