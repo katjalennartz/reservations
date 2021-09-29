@@ -1534,8 +1534,13 @@ function reservations_alert()
     $db->update_query("reservationsmodread", $update, "id='{$id}'");
     redirect("index.php");
   }
+  if ($thisuser == 0) {
+    $flag = 0;
+  } else {
+    $flag = $db->num_rows($entry);
+  }
 
-  if ($db->num_rows($entry) > 0 || $modflag == true) {
+  if ($flag > 0 || $modflag == true) {
     eval("\$reservations_indexalert = \"" . $templates->get("reservations_indexalert") . "\";");
   }
 }
