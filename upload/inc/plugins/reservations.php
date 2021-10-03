@@ -1328,18 +1328,18 @@ function reservations_main()
       $today = date("Y-m-d");
       $typ = $db->fetch_field($db->simple_select("reservationsentry", "type", "entry_id = {$entryid}"), "type");
       $typedata = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$typ}'"));
-      var_dump($typedata);
+      // var_dump($typedata);
       $end_guest = $typedata['guest_duration'];
-      echo  "end_guest;" . $end_guest;
+      // echo  "end_guest;" . $end_guest;
       $end_member = $typedata['member_duration'];
 
       if ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1) {
         if ($end_guest == 0 && $mybb->usergroup['canmodcp'] == 1) {
-          echo "end_guest == 0 && mybb->usergroup['canmodcp'] == 1";
+          // echo "end_guest == 0 && mybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } elseif ($end_member == 0) {
-          echo "end_guest == 0 && ybb->usergroup['canmodcp'] == 1";
+          // echo "end_guest == 0 && ybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } else {
