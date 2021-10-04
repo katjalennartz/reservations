@@ -1383,7 +1383,7 @@ function reservations_main()
 
       // darf der user verlängern? 
       if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
-        if ($entry['ext_cnt'] >= $cnt) {
+        if ($entry['ext_cnt'] > $cnt) {
           //fehler
           error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
         } else {
@@ -1598,7 +1598,7 @@ function reservations_check($thisuser, $res_type, $content)
       $countentrys += $cnt;
     }
     //Wir testen wie oft der Account reserviert hat
-    if ($countentrys >= $type_max && $type_max != 0) {
+    if ($countentrys > $type_max && $type_max != 0) {
       $check[0] = false;
       $check[1] = "Du hast schon die maximale Zahl der Reservierungen erreicht. Du hast gerade " . $countentrys . " Reservierungen. Erlaubt sind: " . $type_max;
       return $check;
@@ -1623,7 +1623,7 @@ function reservations_check($thisuser, $res_type, $content)
         }
         // member_extendcnt
         $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
-        if ($opt_ext_max > 0 && $summe >= $opt_ext_max) {
+        if ($opt_ext_max > 0 && $summe > $opt_ext_max) {
           $check[0] = false;
           $check[1] = "Du hast das erlaubte Maximum der Reservierungen dieser Art erreicht.";
           return $check;
