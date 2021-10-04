@@ -1,7 +1,7 @@
 <?php
-error_reporting(1);
-ini_set('display_errors', true);
-error_reporting();
+// error_reporting(1);
+// ini_set('display_errors', true);
+// error_reporting();
 // Disallow direct access to this file for security reasons
 if (!defined("IN_MYBB")) {
   die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
