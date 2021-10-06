@@ -14,7 +14,7 @@ function reservations_info()
   $lang->load('reservations');
   return array(
     "name" => $lang->reservations_name,
-    "description" => $lang->reservations_descr,
+    "description" => $lang->reservations_descr."<br/> <b>Achtung:</b> Der Accountswitcher von Doylecc muss installiert sein!",
     "website" => "https://github.com/katjalennartz",
     "author" => "risuena",
     "authorsite" => "https://github.com/katjalennartz",
@@ -1161,7 +1161,7 @@ function reservations_main()
         eval("\$reservations_bit .= \"" . $templates->get("reservations_bit") . "\";");
       }
 
-      // Template  mit formfeldern zum reserviere
+      // Template  mit formfeldern zum reservieren
       if ($thisuser == 0 && $type['guest_view'] == 0) {
         $reservations_add = "";
       } else {
@@ -1267,7 +1267,7 @@ function reservations_main()
       //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
 
-      //     // alles gut, der User darf. 
+      // alles gut, der User darf. 
       if ($check[0]) {
         if ($thisuser == 0) {
           $duration = $type_opt['guest_duration'];
@@ -1291,7 +1291,6 @@ function reservations_main()
         );
 
         //Der Hauptaccount von Moderatoren bekommt eine Benachrichtigung
-
         $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
         while ($get_mod = $db->fetch_array($get_mods_q)) {
@@ -1328,18 +1327,14 @@ function reservations_main()
       $today = date("Y-m-d");
       $typ = $db->fetch_field($db->simple_select("reservationsentry", "type", "entry_id = {$entryid}"), "type");
       $typedata = $db->fetch_array($db->simple_select("reservationstype", "*", "type = '{$typ}'"));
-      // var_dump($typedata);
       $end_guest = $typedata['guest_duration'];
-      // echo  "end_guest;" . $end_guest;
       $end_member = $typedata['member_duration'];
 
       if ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1) {
         if ($end_guest == 0 && $mybb->usergroup['canmodcp'] == 1) {
-          // echo "end_guest == 0 && mybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } elseif ($end_member == 0) {
-          // echo "end_guest == 0 && ybb->usergroup['canmodcp'] == 1";
           $db->delete_query("reservationsentry", "entry_id = {$entryid}");
           redirect("misc.php?action=reservations");
         } else {
@@ -1452,11 +1447,7 @@ function reservations_alert()
   if ($thisuser != 0) {
     $charas = reserverations_get_allchars($thisuser);
     $charastring = implode(",", array_keys($charas));
-    //SELECT e.*, t.member_duration, DATEDIFF(enddate, CURDATE()) as date FROM mybb_reservationsentry e LEFT JOIN mybb_reservationstype t ON e.type = t.type WHERE ( 
-    //     uid IN (2475,3333) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
-    //     ) AND (DATEDIFF(enddate, CURDATE()) <= 6)
-    //     AND member_duration != 0
-    // ORDER BY uid, e.type
+
     $entry = $db->write_query("SELECT e.*, t.member_duration FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
             WHERE (uid IN ({$charastring}) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
                  ) AND (DATEDIFF(enddate, CURDATE()) <= {$days} )
@@ -1598,7 +1589,7 @@ function reservations_check($thisuser, $res_type, $content)
       $countentrys += $cnt;
     }
     //Wir testen wie oft der Account reserviert hat
-    if ($countentrys > $type_max && $type_max != 0) {
+    if ($countentrys >= $type_max && $type_max != 0) {
       $check[0] = false;
       $check[1] = "Du hast schon die maximale Zahl der Reservierungen erreicht. Du hast gerade " . $countentrys . " Reservierungen. Erlaubt sind: " . $type_max;
       return $check;
@@ -1621,13 +1612,13 @@ function reservations_check($thisuser, $res_type, $content)
             }
           }
         }
-        // member_extendcnt
-        $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
-        if ($opt_ext_max > 0 && $summe > $opt_ext_max) {
-          $check[0] = false;
-          $check[1] = "Du hast das erlaubte Maximum der Reservierungen dieser Art erreicht.";
-          return $check;
-        }
+        //   // member_extendcnt
+        //   $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
+        //   if ($opt_ext_max > 0 && $summe >= $opt_ext_max) {
+        //     $check[0] = false;
+        //     $check[1] = "Du hast die Reservierung schon zu häufig verlängert.";
+        //     return $check;
+        //   }
       }
     }
   }
