@@ -15,10 +15,11 @@ Es gibt einen Task der die Tabelle regelmäßig selbstständig aufräumt und alt
 
 
 # Installation
-Dateien aus dem Upload Ordner hochladen.  
-Plugin installieren. 
-Berechtigungen setzen! 
-admin/index.php?module=user-admin_permissions&action=edit&uid=0 
+**Wichtig:** der erweiterte Accountswitcher von Doylecc muss installiert sein.      
+Dateien aus dem Upload Ordner hochladen.       
+Plugin installieren.        
+Berechtigungen setzen!      
+admin/index.php?module=user-admin_permissions&action=edit&uid=0         
 
 # To Do
 1. Konfiguration -> Reservierungen. 
