@@ -14,7 +14,7 @@ function reservations_info()
   $lang->load('reservations');
   return array(
     "name" => $lang->reservations_name,
-    "description" => $lang->reservations_descr."<br/> <b>Achtung:</b> Der Accountswitcher von Doylecc muss installiert sein!",
+    "description" => $lang->reservations_descr . "<br/> <b>Achtung:</b> Der Accountswitcher von Doylecc muss installiert sein!",
     "website" => "https://github.com/katjalennartz",
     "author" => "risuena",
     "authorsite" => "https://github.com/katjalennartz",
@@ -1020,9 +1020,10 @@ function reservations_main()
   global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser, $lang;
 
   $lang->load('reservations');
-  add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
+    add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
+
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
@@ -1192,6 +1193,8 @@ function reservations_main()
         $enddate =  date("d.m.Y", strtotime($entry['enddate'])); // enddate + frist;
         //umwandeln 
         $deleteid = $entry['entry_id'];
+        $eid = $entry['entry_id'];
+        $uid = $entry['uid'];
         $name =  $entry['name'];
         $newdate = strtotime($enddate);
         //Sperrzeitraum dazurechnen
@@ -1294,11 +1297,13 @@ function reservations_main()
         $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
         while ($get_mod = $db->fetch_array($get_mods_q)) {
+          // echo "Userid ist {$get_mod['uid']}";
 
           if (is_member(4, $get_mod['uid'])) {
             $moduids .= $get_mod['uid'] . ",";
           }
         }
+
         //speichern
         $db->insert_query("reservationsentry", $insert);
 
@@ -1310,6 +1315,7 @@ function reservations_main()
           "notread_uids" => $moduids,
           "entry_id" => $lastId - 1,
         );
+
         $db->insert_query("reservationsmodread", $insert_mod);
 
         redirect("misc.php?action=reservations");
@@ -1352,11 +1358,11 @@ function reservations_main()
     if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
-
+  
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
         $db->delete_query('reservationsmodread', "entry_id = {$entryid}");
+        
         redirect("misc.php?action=reservations");
-        die();
       }
     }
 
@@ -1448,7 +1454,7 @@ function reservations_alert()
     $charas = reserverations_get_allchars($thisuser);
     $charastring = implode(",", array_keys($charas));
 
-    $entry = $db->write_query("SELECT e.*, t.member_duration FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
+    $entry = $db->write_query("SELECT e.*, t.member_duration, t.name as typename FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
             WHERE (uid IN ({$charastring}) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
                  ) AND (DATEDIFF(enddate, CURDATE()) <= {$days} )
                  AND member_duration != 0
@@ -1457,19 +1463,33 @@ function reservations_alert()
     while ($thisentry = $db->fetch_array($entry)) {
       $eid = $thisentry['entry_id'];
       $uid = $thisentry['uid'];
+      $userinfo = get_user($uid);
+      $username = $userinfo['username'];
       $res_type = $thisentry['type'];
       $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
 
       $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
       eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
     }
+    if ($db->num_rows($entry) == 0) {
+      $hideclass = "style=\"display:none\"";
+    } else {
+      $hideclass = "";
+    }
+
+    $hideclassmod = "style=\"display:none\"";
     /**
      * Anzeige für Moderatoren, wenn es neue Einträge gibt
      */
     if ($mybb->usergroup['canmodcp'] == 1) {
+      
       $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
       $modflag = false;
-
+      if ($db->num_rows($querymodentry) == 0 ) {
+        $hideclassmod = "style=\"display:none\"";
+      } else {
+        $hideclassmod = "";
+      }
       $charas = reserverations_get_allchars($thisuser);
       $reservations_indexmodnewentry = "";
       while ($modentry = $db->fetch_array($querymodentry)) {
@@ -1503,6 +1523,7 @@ function reservations_alert()
           eval("\$reservations_indexmodnewentry .= \"" . $templates->get("reservations_indexmodnewentry") . "\";");
         }
       }
+
     }
   }
 
@@ -1553,13 +1574,12 @@ function reservations_check($thisuser, $res_type, $content)
   $check[0] = true;
 
   //schon reserviert? 
-  $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}' AND enddate >= CURDATE()))");
+  $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}')) AND enddate >= CURDATE()");
   if ($db->num_rows($entry) > 0) {
     $check[0] = false;
     $check[1] = "Es gibt schon eine Reservierung mit diesen Eintrag.";
     return $check;
   }
-
   //hat irgendeinuser das im profilfeld eingetragen? 
   if ($fid != 0) {
     $testfid = $db->simple_select("userfields", "*", "trim(lower(fid{$fid})) like trim(lower('{$content}'))");
@@ -1601,6 +1621,7 @@ function reservations_check($thisuser, $res_type, $content)
         if ($db->num_rows($entry) > 0) {
           while ($thisentry = $db->fetch_array($entry)) {
             $enddate = $thisentry['enddate'];
+            //TODO Berechnung falsch? Eigentlich, ausrechnen wieviele tage schon reserviert ist... 
             //Heute minus dem Zeitraum, in der der User für erneuten Eintrag gesperrt ist
             $date = new DateTime("-" . $type_lock . " days");
             $checkdate = $date->format("Y-m-d");
