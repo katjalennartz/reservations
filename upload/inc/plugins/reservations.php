@@ -988,8 +988,6 @@ function reservations_admin_load()
         admin_redirect("index.php?module=config-reservations");
       } else {
         if ($mybb->request_method == "post") {
-          // echo "hier ist was falsch";
-          // die();
           $typename = $db->fetch_field($db->simple_select("reservationstype", "type", "type_id='{$tid}'"), "type");
           $db->delete_query("reservationsentry", "type='{$typename}'");
           $db->delete_query("reservationstype", "type_id='{$tid}'");
@@ -1023,7 +1021,7 @@ function reservations_main()
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
     add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
-
+    
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
@@ -1269,9 +1267,46 @@ function reservations_main()
 
       //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
-
       // alles gut, der User darf. 
-      if ($check[0]) {
+      // achtung er durfte noch einmal verlängern
+      if ($check[0] === "extend") {
+        //der user darf noch einmal verlängern
+        $type = $mybb->get_input('type', MyBB::INPUT_STRING);
+        //Eintrag holen
+        $entry = $db->fetch_array($db->simple_select("reservationsentry", "*", "entry_id='{$check[1]}'"));
+        $uid =  $entry['uid'];
+        $entryid = $check[1];
+        //Einstellungen des Typs holen
+        $options = $db->fetch_array($db->simple_select("reservationstype", "*", "type='{$entry['type']}'"));
+        $days = $options['member_extendtime'];
+        $cnt = $options['member_extendcnt'];
+
+        //neues enddatum berechnen
+        $date = date("Y-m-d", strtotime($entry['enddate']));
+        $enddate =  date("Y-m-d", strtotime($date . " + {$days} days"));
+
+        $chars = reserverations_get_allchars($thisuser);
+        $allow = array_key_exists($uid, $chars);
+        // darf der user verlängern? 
+        if ($mybb->user['uid'] != 0 && ($allow || $mybb->usergroup['canmodcp'] == 1)) {
+          if ($entry['ext_cnt'] > $cnt) {
+            //fehler
+            error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
+          } else {
+            //counter hochzählen
+            $extcounter = $entry['ext_cnt'] + 1;
+            $update = array(
+              "enddate" => $enddate,
+              "lastupdate" => date("Y-m-d"),
+              "ext_cnt" => $extcounter,
+            );
+            $db->update_query("reservationsentry", $update, "entry_id = {$entryid}");
+            redirect("misc.php?action=reservations");
+          }
+        }
+      }
+      if ($check[0] == true) {
+
         if ($thisuser == 0) {
           $duration = $type_opt['guest_duration'];
         } else {
@@ -1297,8 +1332,6 @@ function reservations_main()
         $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
         while ($get_mod = $db->fetch_array($get_mods_q)) {
-          // echo "Userid ist {$get_mod['uid']}";
-
           if (is_member(4, $get_mod['uid'])) {
             $moduids .= $get_mod['uid'] . ",";
           }
@@ -1358,10 +1391,10 @@ function reservations_main()
     if ($mybb->input['do_delete'] == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
-  
+
         $db->delete_query('reservationsentry', "entry_id = {$entryid}");
         $db->delete_query('reservationsmodread', "entry_id = {$entryid}");
-        
+
         redirect("misc.php?action=reservations");
       }
     }
@@ -1382,8 +1415,11 @@ function reservations_main()
       $date = date("Y-m-d", strtotime($entry['enddate']));
       $enddate =  date("Y-m-d", strtotime($date . " + {$days} days"));
 
+      $chars = reserverations_get_allchars($mybb->user['uid']);
+
+      $allow = array_key_exists($uid, $chars);
       // darf der user verlängern? 
-      if ($mybb->user['uid'] != 0 && ($mybb->user['uid'] == $uid || $mybb->usergroup['canmodcp'] == 1)) {
+      if ($mybb->user['uid'] != 0 && ($allow || $mybb->usergroup['canmodcp'] == 1)) {
         if ($entry['ext_cnt'] > $cnt) {
           //fehler
           error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
@@ -1482,14 +1518,15 @@ function reservations_alert()
      * Anzeige für Moderatoren, wenn es neue Einträge gibt
      */
     if ($mybb->usergroup['canmodcp'] == 1) {
-      
+
       $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
       $modflag = false;
-      if ($db->num_rows($querymodentry) == 0 ) {
+      if ($db->num_rows($querymodentry) == 0) {
         $hideclassmod = "style=\"display:none\"";
       } else {
         $hideclassmod = "";
       }
+      $thisuser = $mybb->user['uid'];
       $charas = reserverations_get_allchars($thisuser);
       $reservations_indexmodnewentry = "";
       while ($modentry = $db->fetch_array($querymodentry)) {
@@ -1523,7 +1560,6 @@ function reservations_alert()
           eval("\$reservations_indexmodnewentry .= \"" . $templates->get("reservations_indexmodnewentry") . "\";");
         }
       }
-
     }
   }
 
@@ -1532,6 +1568,7 @@ function reservations_alert()
     $id = $mybb->get_input('mark', MyBB::INPUT_INT);
     $modstring = $db->fetch_field($db->simple_select("reservationsmodread", "notread_uids", "id = {$id}"), "notread_uids");
     //alle charas des users bekommen
+    $thisuser = $mybb->user['uid'];
     $allcharas = reserverations_get_allchars($thisuser);
     foreach ($allcharas as $uid => $name) {
 
@@ -1621,8 +1658,12 @@ function reservations_check($thisuser, $res_type, $content)
         if ($db->num_rows($entry) > 0) {
           while ($thisentry = $db->fetch_array($entry)) {
             $enddate = $thisentry['enddate'];
-            //TODO Berechnung falsch? Eigentlich, ausrechnen wieviele tage schon reserviert ist... 
-            //Heute minus dem Zeitraum, in der der User für erneuten Eintrag gesperrt ist
+            // Der user hat den eintrag schon mal getätigt, aber darf noch verlängern
+            if ($thisentry['extcnt'] < $opt_ext_max) {
+              $check[0] = "extend";
+              $check[1] = $thisentry['entry_id'];
+              return $check;
+            }
             $date = new DateTime("-" . $type_lock . " days");
             $checkdate = $date->format("Y-m-d");
             //Vergleichen mit dem Enddatum des eingetragenen Eintrags
@@ -1656,7 +1697,8 @@ function reserverations_get_allchars($thisuser)
 {
   global $mybb, $db;
   //wir brauchen die id des Hauptcharas
-  $as_uid = $mybb->user['as_uid'];
+  $getas_uid = get_user($thisuser);
+  $as_uid = $getas_uid['as_uid'];
   $charas = array();
   if ($as_uid == 0) {
     // as_uid = 0 wenn hauptaccount oder keiner angehangen
@@ -1666,7 +1708,6 @@ function reserverations_get_allchars($thisuser)
     $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE (as_uid = $as_uid) OR (uid = $thisuser) OR (uid = $as_uid) ORDER BY username");
   }
   while ($users = $db->fetch_array($get_all_users)) {
-
     $uid = $users['uid'];
     $charas[$uid] = $users['username'];
   }
