@@ -1020,8 +1020,8 @@ function reservations_main()
   $lang->load('reservations');
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
-    add_breadcrumb($lang->reservations, "misc.php?action=misc.php?action=reservations");
-    
+    add_breadcrumb($lang->reservations, "misc.php?action=reservations");
+
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
     $tabtoshow = $mybb->settings['reservations_defaulttab'];
@@ -1329,12 +1329,15 @@ function reservations_main()
         );
 
         //Der Hauptaccount von Moderatoren bekommt eine Benachrichtigung
-        $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
+        // $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
+
+        $get_mods_q = $db->write_query("SELECT uid, username, usergroup, canmodcp FROM `" . TABLE_PREFIX . "users` u,
+        " . TABLE_PREFIX . "usergroups g
+        where (u.usergroup = g.gid or g.gid in (additionalgroups)) and u.as_uid = 0 and canmodcp = 1");
+
         while ($get_mod = $db->fetch_array($get_mods_q)) {
-          if (is_member(4, $get_mod['uid'])) {
-            $moduids .= $get_mod['uid'] . ",";
-          }
+          $moduids .= $get_mod['uid'] . ",";
         }
 
         //speichern
