@@ -1,10 +1,10 @@
 # last update       
-10.2 - DB änderungen
+10.02.2023 - DB änderungen
 - optionales extrafield 
 - alle einträge als mod als gelesen markieren
 - einträge verstecken user (wieder zeigen und auflisten folgt mit dem nächsten update!)
 - bugfix verlängerung
-- *Unbedingt* Update script durchführen.
+- **Unbedingt** Update script durchführen.
 
 
 # Reservierungsplugin
