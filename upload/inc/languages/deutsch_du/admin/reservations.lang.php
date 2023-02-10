@@ -24,6 +24,8 @@ $l['reservations_error_name'] = "Bitte den Namen ausfüllen.";
 $l['reservations_error_type'] = "Bitte eine Typbezeichnung angeben.";
 
 $l['reservations_error_descr'] = "Bitte eine Beschreibung fürs Input angeben.";
+$l['reservations_error_typ_field'] = "Bitte den Typ für das Vergleichsfeld angeben.";
+
 $l['reservations_error_guestview'] = "Angeben ob Gäste Zugriff auf die Reservierung haben.";
 $l['reservations_error_guestview'] = "Angeben wie lange Gäste reservieren dürfen.";
 $l['reservations_error_memberlock'] = "Bitte ausfüllen nach welchem Zeitraum der Typ erneut vom gleichen Mitglied ausgefüllt werden darf.";
@@ -74,8 +76,14 @@ $l['reservations_typecreate_member_extendcnt_descr'] = "";
 $l['reservations_typecreate_member_max'] = "Wieviele Einträge des Mitglieds darf es max. geben?";
 $l['reservations_typecreate_member_max_descr'] = "z.B maximal 3 Avatapersonen pro Mitglied. Bitte 0 angeben, wenn es keine Beschränkung gibt.";
 
-$l['reservations_typecreate_pfid'] = "Welches Profilfeld?";
-$l['reservations_typecreate_pfid_descr'] = "In welches Profilfeld(ID) wird der Eintrag bei bestehenden Usern eingetragen? 0 wenn gar nicht.";
+$l['reservations_typecreate_pfid_typ'] = "Profilfeldabfrage oder Steckbriefpluginfeld?";
+$l['reservations_typecreate_pfid_descr_typ'] = "Soll das Feld mit einem klassischen Profilfeld oder einem Steckbriefpluginfeld verglichen werden?";
+
+$l['reservations_typecreate_pfid'] = "Welches Profilfeld / Steckbriefpluginfeld?";
+$l['reservations_typecreate_pfid_descr'] = "In welches Profilfeld(ID) oder Steckbriefpluginfeld(Bezeichnung) wird der Eintrag bei bestehenden Usern eingetragen? 0 wenn gar nicht. Für Profildfeld die ID also z.B. 5 eingeben fürs Steckbrieffeld z.B. Faceclaim";
+
+$l['reservations_typecreate_extra'] = "Soll es ein Extrafeld für weitere Angaben geben?";
+$l['reservations_typecreate_pfid_extra'] = "Hier die Bezeichnung dafür eingeben. z.B. Link zum Gesuch. Leerlassen wenn nicht benötigt";
 
 $l['reservations_success'] = "Erfolgreich gespeichert.";
 $l['reservations_edit_but'] = "Optionen";
