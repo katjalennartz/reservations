@@ -6,7 +6,10 @@
 if (!defined("IN_MYBB")) {
   die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
-
+//TODO Speicehrn extrafield
+//TODO ÜBERPRÜFUNG VERLÄNGERUNG
+//TODO Keins nur reservierungen vergleich
+//TODO APPLICSATION FIELD oder PROFILFIELD? 
 
 function reservations_info()
 {
@@ -54,7 +57,9 @@ function reservations_install()
     `member_extendtime` int(20) NOT NULL,
     `member_extendcnt` int(20) NOT NULL,
     `member_max` int(20) NOT NULL,
-    `pfid` int(20) NOT NULL,
+    `checkfield_typ` VARCHAR(200) NOT NULL,
+    `pfid` varchar(200) NOT NULL,
+    `extra` varchar(500) NOT NULL,
     PRIMARY KEY (`type_id`)
      ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
 
@@ -69,6 +74,7 @@ function reservations_install()
     `startdate` date NOT NULL,
     `enddate` date NOT NULL,
     `lastupdate` date NOT NULL,
+    `showindex` int(1) NOT NULL DEFAULT 1,
     `ext_cnt` int(20) NOT NULL DEFAULT '0',
     PRIMARY KEY (`entry_id`)
      ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
@@ -172,7 +178,7 @@ function reservations_install()
   $template[2] = array(
     "title" => 'reservations_bituser',
     "template" => '<div class="res_bit">
-    <strong>{$entry[\\\'content\\\']}</strong> -  für {$name}{$userlink} bis {$enddate} {$edit} {$delete} {$extend}
+    <strong>{$entry[\\\'content\\\']}</strong> -  für {$name}{$userlink} bis {$enddate} {$edit} {$delete} {$extend} {$extra} 
     <div class="modal" id="edit_{$eid}" style="display: none; padding: 10px; margin: auto; text-align: center;">
       <form method="post" action="misc.php?action=reservations&type={$res_type}" id="edit{$entry[\\\'entry_id\\\']}">
         {$res_selects_edit}
@@ -671,7 +677,9 @@ function reservations_admin_load()
         if (empty($mybb->input['descr'])) {
           $errors[] = $lang->reservations_error_descr;
         }
-
+        if (empty($mybb->input['checkfield_typ'])) {
+          $errors[] = $lang->reservations_error_typ_field;
+        }
         //wenn alles passt eintragen
         if (empty($errors)) {
           $insert = [
@@ -687,7 +695,9 @@ function reservations_admin_load()
             "member_extendtime" => intval($mybb->input['member_extendtime']),
             "member_extendcnt" => intval($mybb->input['member_extendcnt']),
             "member_max" => intval($mybb->input['member_max']),
-            "pfid" => intval($mybb->input['pfid']),
+            "checkfield_typ" => $db->escape_string($mybb->input['checkfield_typ']),
+            "pfid" => $db->escape_string($mybb->input['pfid']),
+            "extra" => $db->escape_string($mybb->input['extra'])
           ];
           $db->insert_query("reservationstype", $insert);
 
@@ -797,10 +807,42 @@ function reservations_admin_load()
         $lang->reservations_typecreate_member_max_descr,
         $form->generate_numeric_field('member_max', $mybb->input['member_max'], array('id' => 'disporder', 'min' => 0))
       );
+
+      //was muss vorselektiert werden
+      if ($mybb->input['checkfield_typ'] == "profilfeld") {
+        $check_p = 1;
+        $check_aucp = 0;
+        $check_no = 0;
+      } elseif ($mybb->input['checkfield_typ'] == "aucpfield") {
+        $check_p = 0;
+        $check_aucp = 1;
+        $check_no = 0;
+      } else {
+        $check_p = 0;
+        $check_aucp = 0;
+        $check_no = 0;
+      }
+
+      $radios = $form->generate_radio_button("checkfield_typ", "profilfeld", "Profilfeld", array('checked' => $check_p)) . "<br/>";
+      $radios .= $form->generate_radio_button("checkfield_typ", "aucpfield", "Steckbriefplugin Feld", array('checked' => $check_aucp)) . "<br/>";
+      $radios .= $form->generate_radio_button("checkfield_typ", "keins", "Keine Überprüfung mit einem Userfeld", array('checked' => $check_no)) . "<br/>";
+
+      $form_container->output_row(
+        $lang->reservations_typecreate_pfid_typ . "<em>*</em>",
+        $lang->reservations_typecreate_pfid_descr_typ,
+        $radios
+      );
+
       $form_container->output_row(
         $lang->reservations_typecreate_pfid . "<em>*</em>",
         $lang->reservations_typecreate_pfid_descr,
-        $form->generate_numeric_field('pfid', $mybb->input['pfid'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_text_box('pfid', $mybb->input['pfid'])
+      );
+
+      $form_container->output_row(
+        $lang->reservations_typecreate_extra . "",
+        $lang->reservations_typecreate_pfid_extra,
+        $form->generate_text_box('extra', $mybb->input['extra'])
       );
 
       $form_container->end();
@@ -824,6 +866,9 @@ function reservations_admin_load()
         if (empty($mybb->input['descr'])) {
           $errors[] = $lang->reservations_error_descr;
         }
+        if (empty($mybb->input['checkfield_typ'])) {
+          $errors[] = $lang->reservations_error_typ_field;
+        }
 
         // Keine Fehler, dann einfügen
         if (empty($errors)) {
@@ -842,7 +887,9 @@ function reservations_admin_load()
             "member_extendtime" => intval($mybb->input['member_extendtime']),
             "member_extendcnt" => intval($mybb->input['member_extendcnt']),
             "member_max" => intval($mybb->input['member_max']),
-            "pfid" => intval($mybb->input['pfid']),
+            "checkfield_typ" => $db->escape_string($mybb->input['checkfield_typ']),
+            "pfid" => $db->escape_string($mybb->input['pfid']),
+            "extra" => $db->escape_string($mybb->input['extra'])
           ];
 
           $db->update_query("reservationstype", $update, "type_id='{$tid}'");
@@ -955,10 +1002,42 @@ function reservations_admin_load()
         $form->generate_numeric_field('member_max', $edit_res['member_max'], array('id' => 'disporder', 'min' => 0))
       );
 
+      //was muss vorselektiert werden
+      if ($edit_res['checkfield_typ'] == "profilfeld") {
+        $check_p = 1;
+        $check_aucp = 0;
+        $check_no = 0;
+      } elseif ($edit_res['checkfield_typ'] == "aucpfield") {
+        $check_p = 0;
+        $check_aucp = 1;
+        $check_no = 0;
+      } else {
+        $check_p = 0;
+        $check_aucp = 0;
+        $check_no = 0;
+      }
+
+      $radios = $form->generate_radio_button("checkfield_typ", "profilfeld", "Profilfeld", array('checked' => $check_p)) . "<br/>";
+      $radios .= $form->generate_radio_button("checkfield_typ", "aucpfield", "Steckbriefplugin Feld", array('checked' => $check_aucp)) . "<br/>";
+      $radios .= $form->generate_radio_button("checkfield_typ", "keins", "Keine Überprüfung mit einem Userfeld", array('checked' => $check_no)) . "<br/>";
+
+      //ausgabe
       $form_container->output_row(
+        $lang->reservations_typecreate_pfid_typ . "<em>*</em>",
+        $lang->reservations_typecreate_pfid_descr_typ,
+        $radios
+      );
+
+      $form_container->output_row( //
         $lang->reservations_typecreate_pfid . "<em>*</em>",
         $lang->reservations_typecreate_pfid_descr,
-        $form->generate_numeric_field('pfid', $edit_res['pfid'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_text_box('pfid', $edit_res['pfid'])
+      );
+
+      $form_container->output_row(
+        $lang->reservations_typecreate_extra . "",
+        $lang->reservations_typecreate_pfid_extra,
+        $form->generate_text_box('extra', $edit_res['extra'])
       );
       $form_container->end();
       $buttons[] = $form->generate_submit_button($lang->reservations_overview_typecreate_edit);
@@ -1017,10 +1096,11 @@ function reservations_main()
 {
   global $mybb, $db, $templates, $header, $footer, $theme, $headerinclude, $res_name, $reservations_main, $reservations_bituser, $lang;
 
-  $lang->load('reservations');
+
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
-    add_breadcrumb($lang->reservations, "misc.php?action=reservations");
+    $lang->load('reservations');
+    add_breadcrumb("reservations", "misc.php?action=reservations");
 
     $thisuser = $mybb->user['uid'];
     //welches tab soll Default zu sehen sein?
@@ -1052,9 +1132,16 @@ function reservations_main()
 
       $res_name = $type['name'];
       //inputs erstellen zum reservieren
+      if ($type['extra'] != "") {
+        $extrainput = '<span class="res_label--main">' . $type['extra'] . ':</span> <input type="text" name="' . $res_type . '_extra" />';
+      } else {
+        $extrainput = "";
+      }
       $res_inputs =
-        $type['descr'] . ': <input type="text" name="' . $res_type . '_con" /><br/>
-        Spielername: <input type="text" name="' . $res_type . '_name" /> ';
+        '<span class="res_label--main">' . $type['descr'] . ':</span> <input type="text" name="' . $res_type . '_con" /><br/>
+        <span class="res_label--main">Spielername:</span> <input type="text" name="' . $res_type . '_name" /> 
+         ' . $extrainput;
+
 
       //radiobuttons erstellen
       $res_selects = "";
@@ -1066,8 +1153,9 @@ function reservations_main()
       //Reservierungstypen nacheinander durchgehen, sortiert nach Auswahlmöglichkeiten
       foreach ($selections as $sel) {
         //input für radio button erstellen
+        $sel = trim($sel);
         if ($sel != "") {
-          $res_selects .= '<input type="radio" name="' . $res_type . '_sel" value="' . $sel . '"/> ' . $sel . '<br/>';
+          $res_selects .= '<input type="radio" id="' . $sel . '" name="' . $res_type . '_sel" value="' . $sel . '" required/> <label for="' . $sel . '">' . $sel . '</label><br/>';
         }
 
         //ausgabe aufgetrennt nach selection
@@ -1088,18 +1176,19 @@ function reservations_main()
           $uid = $entry['uid'];
           //     //edit/delete/verlängern erstellen
           if ((($thisuser == $entry['uid']) && ($thisuser != 0))  || ($mybb->usergroup['canmodcp'] == 1)) {
-            $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">[x]</a>";
-            $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">[e]</a>";
-            $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[+]</a>";
+            $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('Möchtest du den Eintrag wirklich löschen?');\">{$lang->reservations_delete}</a>";
+            $edit = "<a onclick=\"$('#edit_{$eid}').modal({ fadeDuration: 250, keepelement: true, zIndex: (typeof modal_zindex !== 'undefined' ? modal_zindex : 9999) }); return false;\" style=\"cursor: pointer;\">{$lang->reservations_edit}</a>";
+            $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">{$lang->reservations_extend}</a>";
 
             $res_selects_edit = "";
             //Fürs edit radiobuttons
             foreach ($selections as $save) {
               //input für radio button
+              $save = trim($save);
               if ($save != "") {
                 if (trim($save) == trim($entry['selection'])) $check = "CHECKED";
                 else $check = "";
-                $res_selects_edit .= '<input type="radio" name="editsel" value="' . $save . '" ' . $check . '/> ' . $save;
+                $res_selects_edit .= '<input type="radio" name="editsel" id="' . $save . '" value="' . $save . '" ' . $check . ' " required /> <label for="' . $save . '">' . $save . '</label>';
               }
             }
           }
@@ -1112,7 +1201,7 @@ function reservations_main()
           }
 
           $name = $entry['name'];
-
+          $extra = $entry['extra'];
           $enddate =  date("d.m.Y", strtotime($entry['enddate']));
           $today = date("d.m.Y");
 
@@ -1132,7 +1221,7 @@ function reservations_main()
             // wenn eintrag von gast dann enddate
             if ($uid == 0) {
               //guest unendlich
-              $enddate = "open end";
+              $enddate = $lang->reservations_openend;
               eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
             } else { //wenn eintrag von user dann immer
 
@@ -1144,7 +1233,7 @@ function reservations_main()
           } else if ($type['member_duration'] == 0 && $type['guest_duration'] != 0) {
             //member unendlich, guest nicht 
             if ($uid != 0) {
-              $enddate = "open end";
+              $enddate = $lang->reservations_openend;
               eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
             } else {
               if ($showflag) {
@@ -1153,7 +1242,7 @@ function reservations_main()
             }
           } else { // nur anzeigen wenn das enddatum noch noch nicht erreicht ist
             //beide unendlich also alles ausspucken
-            $enddate = "open end";
+            $enddate = $lang->reservations_openend;
             eval("\$reservations_bituser .= \"" . $templates->get("reservations_bituser") . "\";");
           }
         }
@@ -1194,6 +1283,7 @@ function reservations_main()
         $eid = $entry['entry_id'];
         $uid = $entry['uid'];
         $name =  $entry['name'];
+        $extra = $entry['extra'];
         $newdate = strtotime($enddate);
         //Sperrzeitraum dazurechnen
         $newdate = strtotime("+{$lockdays} day", $newdate);
@@ -1252,11 +1342,11 @@ function reservations_main()
     //Eintrag speichern
     if (isset($mybb->input['res_save'])) {
 
-      //     //infos bekommen
+      //infos bekommen
       $res_type = $mybb->get_input('type_hid', MyBB::INPUT_STRING);
       $content = $mybb->get_input("{$res_type}_con", MyBB::INPUT_STRING);
       $name = $mybb->get_input("{$res_type}_name", MyBB::INPUT_STRING);
-
+      $extra = $mybb->get_input("{$res_type}_extra", MyBB::INPUT_STRING);
       //entsprechende infos zur liste bekommen
       $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
 
@@ -1267,6 +1357,7 @@ function reservations_main()
 
       //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
+
       // alles gut, der User darf. 
       // achtung er durfte noch einmal verlängern
       if ($check[0] === "extend") {
@@ -1325,13 +1416,13 @@ function reservations_main()
           "selection" => $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING),
           "startdate" => date("Y-m-d"),
           "enddate" => $enddate,
+          "extra" => $db->escape_string($extra),
           "lastupdate" => date("Y-m-d"),
         );
 
         //Der Hauptaccount von Moderatoren bekommt eine Benachrichtigung
         // $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
-
         $get_mods_q = $db->write_query("SELECT uid, username, usergroup, canmodcp FROM `" . TABLE_PREFIX . "users` u,
         " . TABLE_PREFIX . "usergroups g
         where (u.usergroup = g.gid or g.gid in (additionalgroups)) and u.as_uid = 0 and canmodcp = 1");
@@ -1360,7 +1451,17 @@ function reservations_main()
         die();
       }
     }
-
+    //eintrag verstecken
+    if ($mybb->input['hideindex'] === "do_hide") {
+      $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
+      $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
+      if ($mybb->user['uid'] == $uid) {
+        $update = array(
+          "showindex" => 0,
+        );
+        $db->update_query("reservationsentry", $update, "entry_id='{$entryid}'");
+      }
+    }
     //eintrag löschen
     if ($mybb->input['do_delete'] === "do_delete") {
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
@@ -1423,9 +1524,9 @@ function reservations_main()
       $allow = array_key_exists($uid, $chars);
       // darf der user verlängern? 
       if ($mybb->user['uid'] != 0 && ($allow || $mybb->usergroup['canmodcp'] == 1)) {
-        if ($entry['ext_cnt'] > $cnt) {
+        if ($entry['ext_cnt'] >= $cnt) {
           //fehler
-          error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung nicht möglich.");
+          error("Du hast diese Reservierung schon zu häufig verlängert.", "Reservierung verlängern nicht möglich.");
         } else {
           //counter hochzählen
           $extcounter = $entry['ext_cnt'] + 1;
@@ -1477,10 +1578,10 @@ function reservations_main()
 $plugins->add_hook('index_start', 'reservations_alert');
 function reservations_alert()
 {
-  global $templates, $db, $mybb, $reservations_indexalert;
+  global $templates, $db, $mybb, $lang, $reservations_indexalert;
   // Reservierung läuft ab
   // Erst einmal gucken, ob es überhaupt schon Listen/Einträge gibt
-
+  $lang->load('reservations');
 
   //Einstellunge bekommen
   $days = $mybb->settings['reservations_days_reminder'];
@@ -1493,10 +1594,11 @@ function reservations_alert()
     $charas = reserverations_get_allchars($thisuser);
     $charastring = implode(",", array_keys($charas));
 
-    $entry = $db->write_query("SELECT e.*, t.member_duration, t.name as typename FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
+    $entry = $db->write_query("SELECT e.*, t.member_duration, t.member_extendcnt, t.name as typename FROM " . TABLE_PREFIX . "reservationsentry e LEFT JOIN " . TABLE_PREFIX . "reservationstype t ON e.type = t.type 
             WHERE (uid IN ({$charastring}) AND (DATEDIFF(enddate, CURDATE()) >= 0) 
                  ) AND (DATEDIFF(enddate, CURDATE()) <= {$days} )
                  AND member_duration != 0
+                 AND showindex  = 1
              ORDER BY uid, e.type");
 
     while ($thisentry = $db->fetch_array($entry)) {
@@ -1505,8 +1607,14 @@ function reservations_alert()
       $userinfo = get_user($uid);
       $username = $userinfo['username'];
       $res_type = $thisentry['type'];
-      $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('Möchtest du den Eintrag verlängern?');\">[verlängern]</a>";
-
+      $extend =  "<a href=\"misc.php?action=reservations&extend=do_extend&id={$eid}&uid={$uid}&type={$res_type}\" onClick=\"return confirm('{$lang->reservations_extend_confirm}');\">{$lang->reservations_extend}</a>";
+      $delete =  "<a href=\"misc.php?action=reservations&do_delete=do_delete&id={$eid}&uid={$uid}\" onClick=\"return confirm('{$lang->reservations_delete_confirm}');\">{$lang->reservations_delete}</a>";
+      if ($thisentry['ext_cnt'] >= $thisentry['member_extendcnt']) {
+        $index =  "<a href=\"misc.php?action=reservations&hideindex=do_hide&id={$eid}&uid={$uid}\" onClick=\"return confirm('{$lang->reservations_hide_confirm}');\">{$lang->reservations_hide}</a>";
+        $extend = $lang->reservations_extend_no;
+      } else {
+        $index = "";
+      }
       $thisentry['enddate'] =  date("d.m.Y", strtotime($thisentry['enddate']));
       eval("\$reservations_indexuserbit .= \"" . $templates->get("reservations_indexuserbit") . "\";");
     }
@@ -1520,10 +1628,10 @@ function reservations_alert()
     /**
      * Anzeige für Moderatoren, wenn es neue Einträge gibt
      */
+    $modflag = false;
     if ($mybb->usergroup['canmodcp'] == 1) {
-
       $querymodentry = $db->write_query("SELECT * FROM " . TABLE_PREFIX . "reservationsmodread");
-      $modflag = false;
+
       if ($db->num_rows($querymodentry) == 0) {
         $hideclassmod = "style=\"display:none\"";
       } else {
@@ -1545,6 +1653,7 @@ function reservations_alert()
           }
           //deswegen holen wir dazu jetzt den reserveriungseintrag und die Infos dazu.
           if ($modflag == true) {
+            $markallentrys =  "<a href=\"index.php?action=markreadall\">{$lang->reservations_markall}</a> </br>";
             $getentry = $db->simple_select("reservationsentry", "*", "entry_id= {$modentry['entry_id']}");
             $entrymod = $db->fetch_array($getentry);
 
@@ -1566,7 +1675,27 @@ function reservations_alert()
     }
   }
 
+  $mybb->input['action'] = $mybb->get_input('action');
   //Moderatoren wollen die Meldung als gelesen markieren
+  if ($mybb->input['action'] == "markreadall") {
+    $thisuser = $mybb->user['uid'];
+    $allcharas = reserverations_get_allchars($thisuser);
+    $modquery = $db->simple_select("reservationsmodread", "*");
+
+    while ($entry_data = $db->fetch_array($modquery)) {
+      foreach ($allcharas as $uid => $name) {
+        $modstring = $entry_data['notread_uids'];
+        //wenn er die userid findet, löschen
+        $modstring = str_replace("," . $uid . ",", ",", $modstring);
+        $update = array(
+          "notread_uids" => $modstring,
+        );
+        $db->update_query("reservationsmodread", $update, "id='{$entry_data['id']}'");
+      }
+    }
+    redirect("index.php");
+  }
+
   if ($mybb->input['action'] == "markread") {
     $id = $mybb->get_input('mark', MyBB::INPUT_INT);
     $modstring = $db->fetch_field($db->simple_select("reservationsmodread", "notread_uids", "id = {$id}"), "notread_uids");
@@ -1575,7 +1704,7 @@ function reservations_alert()
     $allcharas = reserverations_get_allchars($thisuser);
     foreach ($allcharas as $uid => $name) {
 
-      //wenn er die userid finden, löschen
+      //wenn er die userid findet, löschen
       $modstring = str_replace("," . $uid . ",", ",", $modstring);
     }
     $modstring = str_replace("," . $thisuser . ",", ",", $modstring);
@@ -1603,13 +1732,15 @@ function reservations_alert()
  */
 function reservations_check($thisuser, $res_type, $content)
 {
-  global $db;
+  global $db, $lang;
+  $lang->load('reservations');
   $check = array();
   $type_opt = $db->fetch_array($db->simple_select("reservationstype", "*", "type= '{$res_type}'"));
   $type_lock = $type_opt['member_lock']; //darf das mitglied den gleichen eintrag wieder machen? Sperre
   $type_max = $type_opt['member_max'];  //wie viele einträge darf das mitglied haben (z.b. 3 avapersonen)
   $opt_ext_max = $type_opt['member_extendcnt']; //Wie oft darf ein Mitglied verlängern  (3x verlängern)
 
+  $fidtyp = $type_opt['checkfield_typ'];
   $fid = $type_opt['pfid'];
   $check[0] = true;
 
@@ -1617,28 +1748,42 @@ function reservations_check($thisuser, $res_type, $content)
   $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}')) AND enddate >= CURDATE()");
   if ($db->num_rows($entry) > 0) {
     $check[0] = false;
-    $check[1] = "Es gibt schon eine Reservierung mit diesen Eintrag.";
+    $check[1] = $lang->reservations_entry_exists;
     return $check;
   }
+
   //hat irgendeinuser das im profilfeld eingetragen? 
-  if ($fid != 0) {
+  if ($fidtyp == "aucpfield") {
+    if ($db->table_exists("application_ucp_fields")) {
+      $id = $db->fetch_field($db->simple_select("application_ucp_fields", "id", "fieldname = '{$fid}'"), "id");
+      $testfid = $db->simple_select("application_ucp_userfields", "*", "fieldid = '$id' AND trim(lower(value)) like trim(lower('{$content}'))");
+    }
+    if ($db->num_rows($testfid) > 0) {
+      $check[0] = false;
+      $check[1] = $lang->reservations_entry_exists_member;
+
+      return $check;
+    }
+  } elseif ($fidtyp == "profilfeld") {
     $testfid = $db->simple_select("userfields", "*", "trim(lower(fid{$fid})) like trim(lower('{$content}'))");
     if ($db->num_rows($testfid) > 0) {
       $check[0] = false;
-      $check[1] = "Es gibt schon einen solchen Eintrag von einem der Mitglieder.";
+      $check[1] = $lang->reservations_entry_exists_member;
       return $check;
     }
   }
 
-  //hat irgendeinuser das im profilfeld eingetragen? 
-  if ($res_type == "character") {
-    $testusername = $db->simple_select("users", "*", "trim(lower(username)) like trim(lower('{$content}'))");
-    if ($db->num_rows($testusername) > 0) {
-      $check[0] = false;
-      $check[1] = "Es gibt schon einen solchen Eintrag von einem der Mitglieder.";
-      return $check;
-    }
-  }
+  // Beispiel für üerprüfung mit Usernamen
+  // also gibt es den cahrakter schon?
+  // character = typ der reservierung 
+  // if ($res_type == "character") {
+  //   $testusername = $db->simple_select("users", "*", "trim(lower(username)) like trim(lower('{$content}'))");
+  //   if ($db->num_rows($testusername) > 0) {
+  //     $check[0] = false;
+  //     $check[1] = "Es gibt schon einen solchen Eintrag von einem der Mitglieder.";
+  //     return $check;
+  //   }
+  // }
 
   $countentrys = 0;
   if ($thisuser != 0) {
@@ -1672,7 +1817,7 @@ function reservations_check($thisuser, $res_type, $content)
             //Vergleichen mit dem Enddatum des eingetragenen Eintrags
             if ($enddate > $checkdate) {
               $check[0] = false;
-              $check[1] = "Du hast diese Reservierung schon einmal getätigt und der Zeitraum bis du sie erneut vornehmen kannst ist noch nicht verstrichen.";
+              $check[1] = $lang->reservations_entry_exists_duration;
               return $check;
             }
           }
