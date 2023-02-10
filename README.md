@@ -1,5 +1,6 @@
 # last update       
 10.02.2023 - DB änderungen
+- Kompatibilität mit Steckbriefplugin hinzugefügt
 - optionales extrafield 
 - alle einträge als mod als gelesen markieren
 - einträge verstecken user (wieder zeigen und auflisten folgt mit dem nächsten update!)
