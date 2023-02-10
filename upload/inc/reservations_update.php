@@ -25,7 +25,10 @@ if (!$db->field_exists("showindex", "reservationsentry")) {
   $db->add_column("reservationsentry", "showindex", "int(1) NOT NULL DEFAULT 1");
   echo "showindex hinzugefügt.
   <br>
-  <b style='color: red;'>Im reservations_bituser template noch manuell die variable 'extra' hinzufügen (mit geschweiften klammern und Dollarzeichen)</a></b><br>
+  <b style='color: red;'>Im reservations_bituser template noch manuell die variable 'extra' hinzufügen (z.b. hinter extend),
+  <br>
+  im reservations_indexalert markallentrys am besten vor dem link zu allen reservierungen<br>
+   (mit geschweiften klammern und Dollarzeichen)</a></b><br>
   Datei jetzt löschen!";
 }
 
