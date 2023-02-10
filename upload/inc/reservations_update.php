@@ -14,11 +14,11 @@ if (!$db->field_exists("pfid", "reservationstype")) {
   $db->add_column("reservationstype", "pfid", "VARCHAR(200) NOT NULL");
     echo "pfid in reservationstype hinzugefügt<br>";
 } else  {
-  $db->write_query("ALTER TABLE `mybb_reservationstype` CHANGE `pfid` `pfid` VARCHAR(200) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL");
+  $db->write_query("ALTER TABLE `".TABLE_PREFIX."reservationstype` CHANGE `pfid` `pfid` VARCHAR(200) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL");
   echo "pfid in reservationstype zu geändert zu varchar .<br>";
 }
 if (!$db->field_exists("extra", "reservationstype")) {
-  $db->add_column("extra", "checkfield_typ", "VARCHAR(500) NOT NULL");
+  $db->add_column("reservationstype", "extra", "VARCHAR(500) NOT NULL");
   echo "extra zu reservationstype table hinzugefügt.<br>";
 }
 if (!$db->field_exists("showindex", "reservationsentry")) {
