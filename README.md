@@ -1,4 +1,14 @@
+# last update       
+10.2 - DB änderungen
+- optionales extrafield 
+- alle einträge als mod als gelesen markieren
+- einträge verstecken user (wieder zeigen und auflisten folgt mit dem nächsten update!)
+- bugfix verlängerung
+- *Unbedingt* Update script durchführen.
+
+
 # Reservierungsplugin
+
 Mit diesem Plugin können über das ACP verschiedene Reservierungen erstellt werden. Das heißt, du kannst einen Reservierungstyp für zum Beispiel Avatare, einen für Gesuche, einen für Positionen etc. anlegen.  
 
 Für jeden Typen können verschiedene Einstellungsmöglichkeiten festgelegt werden.  
