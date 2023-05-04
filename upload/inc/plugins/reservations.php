@@ -152,7 +152,6 @@ function reservations_install()
       <div class="res_add_save res_item">
         <input type="hidden" value="{$res_type}" name="type_hid" />
         <button type="submit" form="{$res_type}" value="Submit" name="res_save">Submit</button>
-
       </div>
     </div>
   </form> 
@@ -184,11 +183,9 @@ function reservations_install()
         {$res_selects_edit}
       <input type="hidden" name="edit" value="{$entry[\\\'entry_id\\\']}"/> 
       <input type="hidden" name="restype" value="{$res_type}"/> 
-
 		 <br/>{$type[\\\'descr\\\']}: <input type="text" value="{$entry[\\\'content\\\']}" name="editcontent"/> <br />
       Name: <input type="text" value="{$entry[\\\'name\\\']}" name="editname"/><br />
 		  <button form="edit{$entry[\\\'entry_id\\\']}" type="submit" value="speichern" name="edit_save">speichern</buttons>
-
       </form>
     </div>
   </div>
@@ -204,7 +201,7 @@ function reservations_install()
     <strong>Reservierungsinformation:</strong><br />
     {$reservations_indexuserbit} <br/>
 	{$reservations_indexmodnewentry}
-	<br/>
+  {$markallentrys}
     <a href="misc.php?action=reservations">Zu allen Reservierungen</a>
   </div>
   ',
@@ -238,18 +235,15 @@ function reservations_install()
 	<td valign="top">
 			<div class="res_tab">
 				{$reservations_tabbit}
-
 			</div>
 		
 			{$reservations_typ}
     {$reservations_main_mod}
-
 	</td>
 	</tr>
 	</table>
 	{$reservations_tab_js}
 	{$footer}
-
 </body>
 </html>
     
@@ -318,24 +312,20 @@ function reservations_install()
 		function openRestype(evt, restype) {
  			 // Declare all variables
   			var i, res_tabcontent, res_tablinks;
-
   			// Get all elements with class="tabcontent" and hide them
   			res_tabcontent = document.getElementsByClassName("res_tabcontent");
   			for (i = 0; i < res_tabcontent.length; i++) {
     			res_tabcontent[i].style.display = "none";
   			}
-
   			// Get all elements with class="tablinks" and remove the class "active"
  			res_tablinks = document.getElementsByClassName("res_tablinks");
  			for (i = 0; i < res_tablinks.length; i++) {
    				res_tablinks[i].className = res_tablinks[i].className.replace(" active", "");
 			}
-
 	 	 	// Show the current tab, and add an "active" class to the button that opened the tab
   			document.getElementById(restype).style.display = "block";
   			evt.currentTarget.className += " active";
 		}
-
 	</script>
 <script>
 // Get the element with id="defaultOpen" and click on it
@@ -448,7 +438,6 @@ document.getElementById("but_tabdefault").click();
         flex-basis: 100%;
         text-align: center;
     }
-
     .res_mod {
       background: #e9e9e9;
       padding: 6px 12px;
@@ -1354,7 +1343,7 @@ function reservations_main()
       if ($type_opt['selections'] != "" && $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING) == "") {
         error("Du hast keine Auswahloption gewählt.", "Reservierung nicht möglich.");
       }
-
+      $check = array();
       //Prüfen ob der User reservieren darf
       $check = reservations_check($thisuser, $res_type, $content);
 
@@ -1683,8 +1672,8 @@ function reservations_alert()
     $modquery = $db->simple_select("reservationsmodread", "*");
 
     while ($entry_data = $db->fetch_array($modquery)) {
+      $modstring = $entry_data['notread_uids'];
       foreach ($allcharas as $uid => $name) {
-        $modstring = $entry_data['notread_uids'];
         //wenn er die userid findet, löschen
         $modstring = str_replace("," . $uid . ",", ",", $modstring);
         $update = array(
@@ -1693,6 +1682,7 @@ function reservations_alert()
         $db->update_query("reservationsmodread", $update, "id='{$entry_data['id']}'");
       }
     }
+    $modquery_tidy = $db->delete_query("reservationsmodread", "notread_uids = ',' or notread_uids = ',1,'");
     redirect("index.php");
   }
 
@@ -1806,12 +1796,6 @@ function reservations_check($thisuser, $res_type, $content)
         if ($db->num_rows($entry) > 0) {
           while ($thisentry = $db->fetch_array($entry)) {
             $enddate = $thisentry['enddate'];
-            // Der user hat den eintrag schon mal getätigt, aber darf noch verlängern
-            if ($thisentry['extcnt'] < $opt_ext_max) {
-              $check[0] = "extend";
-              $check[1] = $thisentry['entry_id'];
-              return $check;
-            }
             $date = new DateTime("-" . $type_lock . " days");
             $checkdate = $date->format("Y-m-d");
             //Vergleichen mit dem Enddatum des eingetragenen Eintrags
@@ -1819,8 +1803,16 @@ function reservations_check($thisuser, $res_type, $content)
               $check[0] = false;
               $check[1] = $lang->reservations_entry_exists_duration;
               return $check;
+            } else {
+              // Der user hat den eintrag schon mal getätigt, aber darf noch verlängern
+              if ($thisentry['extcnt'] < $opt_ext_max) {
+                $check[0] = "extend";
+                $check[1] = $thisentry['entry_id'];
+                return $check;
+              }
             }
           }
+          return $check;
         }
         //   // member_extendcnt
         //   $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
@@ -1860,4 +1852,39 @@ function reserverations_get_allchars($thisuser)
     $charas[$uid] = $users['username'];
   }
   return $charas;
+}
+
+$plugins->add_hook("fetch_wol_activity_end", "reserverations_online_activity");
+$plugins->add_hook("build_friendly_wol_location_end", "reserverations_online_location");
+
+function reserverations_online_activity($user_activity)
+{
+  global $parameters, $user;
+  $split_loc = explode(".php", $user_activity['location']);
+  if ($split_loc[0] == $user['location']) {
+    $filename = '';
+  } else {
+    $filename = my_substr($split_loc[0], -my_strpos(strrev($split_loc[0]), "/"));
+  }
+
+  switch ($filename) {
+    case 'misc':
+      if ($parameters['action'] == "reservations" && empty($parameters['site'])) {
+        $user_activity['activity'] = "reservations";
+      }
+      break;
+  }
+
+  return $user_activity;
+}
+
+function reserverations_online_location($plugin_array)
+{
+  global $mybb, $theme, $lang;
+
+  if ($plugin_array['user_activity']['activity'] == "reservations") {
+    $plugin_array['location_name'] = "Sieht sich die <a href=\"./misc.php?action=reservations\">Reservierungen</a> an.";
+  }
+
+  return $plugin_array;
 }
