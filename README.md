@@ -1,4 +1,7 @@
 # last update       
+10.05.2023      
+- kleinere bugfixes
+                
 10.02.2023 - DB änderungen
 - Kompatibilität mit Steckbriefplugin hinzugefügt
 - optionales extrafield 
@@ -6,6 +9,12 @@
 - einträge verstecken user (wieder zeigen und auflisten folgt mit dem nächsten update!)
 - bugfix verlängerung
 - **Unbedingt** Update script durchführen.
+        
+evt im template 'reservations_indexalert'  folgende Variablen hinzufügen:   
+```{$reservations_indexmodnewentry} {$markallentrys} ```
+  
+  vor   
+  ```<a href="misc.php?action=reservations">Zu allen Reservierungen</a>``` 
 
 
 # Reservierungsplugin
