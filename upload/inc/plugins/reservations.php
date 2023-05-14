@@ -76,6 +76,7 @@ function reservations_install()
     `lastupdate` date NOT NULL,
     `showindex` int(1) NOT NULL DEFAULT 1,
     `ext_cnt` int(20) NOT NULL DEFAULT '0',
+    `extra` VARCHAR(500) NOT NULL,
     PRIMARY KEY (`entry_id`)
      ) ENGINE=MyISAM CHARACTER SET utf8 COLLATE utf8_general_ci;");
 
@@ -728,81 +729,81 @@ function reservations_admin_load()
       $form_container->output_row(
         $lang->reservations_typecreate_name . "<em>*</em>", //name
         $lang->reservations_typecreate_name_descr,
-        $form->generate_text_box('name', $mybb->input['name'])
+        $form->generate_text_box('name', $mybb->get_input('name'))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_type . "<em>*</em>", //typname maschinenlesbar
         $lang->reservations_typecreate_type_descr,
-        $form->generate_text_box('type', $mybb->input['type'])
+        $form->generate_text_box('type', $mybb->get_input('type'))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_descr . "<em>*</em>", //beschreibung fürs input
         $lang->reservations_typecreate_descr_descr,
-        $form->generate_text_box('descr', $mybb->input['descr'])
+        $form->generate_text_box('descr', $mybb->get_input('descr'))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_selections, //Was kann ausgewählt werden?
         $lang->reservations_typecreate_selections_descr,
-        $form->generate_text_box('selections', $mybb->input['selections'])
+        $form->generate_text_box('selections', $mybb->get_input('selections'))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_guest_view, //dürfen gäste reservieren
         $lang->reservations_typecreate_guest_view_descr,
-        $form->generate_yes_no_radio('guest_view', $mybb->get_input('guest_view'))
+        $form->generate_yes_no_radio('guest_view', $mybb->get_input('guest_view', MYBB::INPUT_INT))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_guest_duration, //wie lange dürfen gäste reservieren
         $lang->reservations_typecreate_guest_duration_descr,
-        $form->generate_numeric_field('guest_duration', $mybb->input['guest_duration'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('guest_duration', $mybb->get_input('guest_duration', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_duration, //wie lange dürfen mitglieder reservieren
         $lang->reservations_typecreate_member_duration_descr,
-        $form->generate_numeric_field('member_duration', $mybb->input['member_duration'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('member_duration', $mybb->get_input('member_duration', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_lock, //zeitraum für sperre
         $lang->reservations_typecreate_member_lock_descr,
-        $form->generate_numeric_field('member_lock', $mybb->input['member_lock'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('member_lock', $mybb->get_input('member_lock', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_extend . "<em>*</em>", //dürfen mitglieder verländern
         $lang->reservations_typecreate_member_extend_descr,
-        $form->generate_yes_no_radio('member_extend', $mybb->get_input('member_extend'))
+        $form->generate_yes_no_radio('member_extend', $mybb->get_input('member_extend', MYBB::INPUT_INT))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_extendtime, //wie lange
         $lang->reservations_typecreate_member_extendtime_descr,
-        $form->generate_numeric_field('member_extendtime', $mybb->input['member_extendtime'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('member_extendtime', $mybb->get_input('member_extendtime', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_extendcnt . //Wie oft
           $lang->reservations_typecreate_member_extendcnt_descr,
-        $form->generate_numeric_field('member_extendcnt', $mybb->input['member_extendcnt'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('member_extendcnt', $mybb->get_input('member_extendcnt', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_member_max, //wieviele einträge maximal
         $lang->reservations_typecreate_member_max_descr,
-        $form->generate_numeric_field('member_max', $mybb->input['member_max'], array('id' => 'disporder', 'min' => 0))
+        $form->generate_numeric_field('member_max', $mybb->get_input('member_max', MYBB::INPUT_INT), array('id' => 'disporder', 'min' => 0))
       );
 
       //was muss vorselektiert werden
-      if ($mybb->input['checkfield_typ'] == "profilfeld") {
+      if ($mybb->get_input('checkfield_typ') == "profilfeld") {
         $check_p = 1;
         $check_aucp = 0;
         $check_no = 0;
-      } elseif ($mybb->input['checkfield_typ'] == "aucpfield") {
+      } elseif ($mybb->get_input('checkfield_typ') == "aucpfield") {
         $check_p = 0;
         $check_aucp = 1;
         $check_no = 0;
@@ -825,13 +826,13 @@ function reservations_admin_load()
       $form_container->output_row(
         $lang->reservations_typecreate_pfid . "<em>*</em>",
         $lang->reservations_typecreate_pfid_descr,
-        $form->generate_text_box('pfid', $mybb->input['pfid'])
+        $form->generate_text_box('pfid', $mybb->get_input('pfid'))
       );
 
       $form_container->output_row(
         $lang->reservations_typecreate_extra . "",
         $lang->reservations_typecreate_pfid_extra,
-        $form->generate_text_box('extra', $mybb->input['extra'])
+        $form->generate_text_box('extra', $mybb->get_input('extra'))
       );
 
       $form_container->end();
@@ -1088,6 +1089,8 @@ function reservations_main()
 
   //Reservierungsseite
   if ($mybb->get_input('action', MyBB::INPUT_STRING) == "reservations") {
+    $reservations_tabbit = "";
+    $reservations_typ = "";
     $lang->load('reservations');
     add_breadcrumb("reservations", "misc.php?action=reservations");
 
@@ -1258,7 +1261,7 @@ function reservations_main()
     if ($mybb->usergroup['canmodcp'] == 1) {
       //Einträge 
       $get_entry = $db->simple_select("reservationsentry", "*", "enddate < CURDATE()", array('order_by' => 'type, content'));
-
+      $reservations_main_modbit = "";
 
       while ($entry = $db->fetch_array($get_entry)) {
         //wieviele tage muss der User warten, bis er wieder reservieren darf
@@ -1412,9 +1415,14 @@ function reservations_main()
         //Der Hauptaccount von Moderatoren bekommt eine Benachrichtigung
         // $get_mods_q = $db->simple_select("users", "*", "as_uid = 0");
         $moduids = ",";
+        $as = "";
+        if ($db->field_exists("as_uid", "users")) {
+          $as = "and u.as_uid = 0";
+        }
+
         $get_mods_q = $db->write_query("SELECT uid, username, usergroup, canmodcp FROM `" . TABLE_PREFIX . "users` u,
         " . TABLE_PREFIX . "usergroups g
-        where (u.usergroup = g.gid or g.gid in (additionalgroups)) and u.as_uid = 0 and canmodcp = 1");
+        where (u.usergroup = g.gid or g.gid in (additionalgroups)) {$as} and canmodcp = 1");
 
         while ($get_mod = $db->fetch_array($get_mods_q)) {
           $moduids .= $get_mod['uid'] . ",";
@@ -1441,7 +1449,7 @@ function reservations_main()
       }
     }
     //eintrag verstecken
-    if ($mybb->input['hideindex'] === "do_hide") {
+    if ($mybb->get_input('hideindex') === "do_hide") {
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
       if ($mybb->user['uid'] == $uid) {
@@ -1452,7 +1460,7 @@ function reservations_main()
       }
     }
     //eintrag löschen
-    if ($mybb->input['do_delete'] === "do_delete") {
+    if ($mybb->get_input('do_delete') === "do_delete") {
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
 
@@ -1481,7 +1489,7 @@ function reservations_main()
       }
       die();
     }
-    if ($mybb->input['do_delete'] == "mod_delete") {
+    if ($mybb->get_input('do_delete') == "mod_delete") {
       if ($mybb->usergroup['canmodcp'] == 1) {
         $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
 
@@ -1493,7 +1501,7 @@ function reservations_main()
     }
 
     //eintrag verlängern
-    if ($mybb->input['extend'] == "do_extend") {
+    if ($mybb->get_input('extend') == "do_extend") {
       //daten aus dem link holen und direkt schauen, dass sie das richtige format haben
       $entryid = $mybb->get_input('id', MyBB::INPUT_INT);
       $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
@@ -1571,7 +1579,7 @@ function reservations_alert()
   // Reservierung läuft ab
   // Erst einmal gucken, ob es überhaupt schon Listen/Einträge gibt
   $lang->load('reservations');
-
+  $reservations_indexuserbit = "";
   //Einstellunge bekommen
   $days = $mybb->settings['reservations_days_reminder'];
   //abfangen wenn es noch keine einstellung gibt
@@ -1814,13 +1822,6 @@ function reservations_check($thisuser, $res_type, $content)
           }
           return $check;
         }
-        //   // member_extendcnt
-        //   $summe = $db->fetch_field($db->simple_select("reservationsentry", "sum(ext_cnt) as sum", "uid = {$uid} and type = '{$res_type}'"), "sum");
-        //   if ($opt_ext_max > 0 && $summe >= $opt_ext_max) {
-        //     $check[0] = false;
-        //     $check[1] = "Du hast die Reservierung schon zu häufig verlängert.";
-        //     return $check;
-        //   }
       }
     }
   }
@@ -1837,16 +1838,25 @@ function reserverations_get_allchars($thisuser)
 {
   global $mybb, $db;
   //wir brauchen die id des Hauptcharas
+  $as_uid = 0;
+
   $getas_uid = get_user($thisuser);
+  $getas_uid['as_uid'] = "0";
   $as_uid = $getas_uid['as_uid'];
   $charas = array();
-  if ($as_uid == 0) {
-    // as_uid = 0 wenn hauptaccount oder keiner angehangen
-    $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE (as_uid = $thisuser) OR (uid = $thisuser) ORDER BY username");
-  } else if ($as_uid != 0) {
-    //id des users holen wo alle an gehangen sind 
-    $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE (as_uid = $as_uid) OR (uid = $thisuser) OR (uid = $as_uid) ORDER BY username");
+  if ($db->field_exists("as_uid", "users")) {
+    if ($as_uid == 0) {
+      // as_uid = 0 wenn hauptaccount oder keiner angehangen
+      $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE (as_uid = $thisuser) OR (uid = $thisuser) ORDER BY username");
+    } else if ($as_uid != 0) {
+      //id des users holen wo alle an gehangen sind 
+      $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE (as_uid = $as_uid) OR (uid = $thisuser) OR (uid = $as_uid) ORDER BY username");
+    }
+  } else {
+    $get_all_users = $db->query("SELECT uid,username FROM " . TABLE_PREFIX . "users WHERE uid = $thisuser");
   }
+
+
   while ($users = $db->fetch_array($get_all_users)) {
     $uid = $users['uid'];
     $charas[$uid] = $users['username'];
@@ -1860,12 +1870,16 @@ $plugins->add_hook("build_friendly_wol_location_end", "reserverations_online_loc
 function reserverations_online_activity($user_activity)
 {
   global $parameters, $user;
-  $split_loc = explode(".php", $user_activity['location']);
-  if ($split_loc[0] == $user['location']) {
-    $filename = '';
-  } else {
-    $filename = my_substr($split_loc[0], -my_strpos(strrev($split_loc[0]), "/"));
+  $filename = "";
+  if (!empty($user['location'])) {
+    $split_loc = explode(".php", $user_activity['location']);
+    if ($split_loc[0] == $user['location']) {
+      $filename = '';
+    } else {
+      $filename = my_substr($split_loc[0], -my_strpos(strrev($split_loc[0]), "/"));
+    }
   }
+
 
   switch ($filename) {
     case 'misc':
