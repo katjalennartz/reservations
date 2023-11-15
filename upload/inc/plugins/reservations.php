@@ -1400,12 +1400,13 @@ function reservations_main()
         //wir brauchen das richtige format für die Datenbank
         $enddate =  $date->format("Y-m-d");
 
+        $resel = $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING);
         $insert = array(
           "uid" => $thisuser,
           "name" =>  $db->escape_string($name),
           "type" => $res_type,
           "content" => $db->escape_string($content),
-          "selection" => $db->escape_string($mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING)),
+          "selection" => $db->escape_string($resel),
           "startdate" => date("Y-m-d"),
           "enddate" => $enddate,
           "extra" => $db->escape_string($extra),
@@ -1737,12 +1738,14 @@ function reservations_check($thisuser, $res_type, $content)
   $type_lock = $type_opt['member_lock']; //darf das mitglied den gleichen eintrag wieder machen? Sperre
   $type_max = $type_opt['member_max'];  //wie viele einträge darf das mitglied haben (z.b. 3 avapersonen)
   $opt_ext_max = $type_opt['member_extendcnt']; //Wie oft darf ein Mitglied verlängern  (3x verlängern)
-
+  $content = $db->escape_string($content);
+  $res_type =  $db->escape_string($res_type);
   $fidtyp = $type_opt['checkfield_typ'];
   $fid = $type_opt['pfid'];
   $check[0] = true;
 
   //schon reserviert? 
+
   $entry = $db->simple_select("reservationsentry", "*", "trim(lower(content)) like trim(lower('{$content}')) AND enddate >= CURDATE()");
   if ($db->num_rows($entry) > 0) {
     $check[0] = false;
