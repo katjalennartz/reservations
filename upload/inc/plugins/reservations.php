@@ -1402,10 +1402,10 @@ function reservations_main()
 
         $insert = array(
           "uid" => $thisuser,
-          "name" => $name,
+          "name" =>  $db->escape_string($name),
           "type" => $res_type,
-          "content" => $content,
-          "selection" => $mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING),
+          "content" => $db->escape_string($content),
+          "selection" => $db->escape_string($mybb->get_input("{$res_type}_sel", MyBB::INPUT_STRING)),
           "startdate" => date("Y-m-d"),
           "enddate" => $enddate,
           "extra" => $db->escape_string($extra),
