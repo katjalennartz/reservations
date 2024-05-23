@@ -1004,7 +1004,7 @@ function reservations_admin_load()
       } else {
         $check_p = 0;
         $check_aucp = 0;
-        $check_no = 0;
+        $check_no = 1;
       }
 
       $radios = $form->generate_radio_button("checkfield_typ", "profilfeld", "Profilfeld", array('checked' => $check_p)) . "<br/>";
