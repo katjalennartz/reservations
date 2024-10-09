@@ -18,6 +18,7 @@ $l['reservations_overview_typeeditdescr'] = "Bearbeite hier einen Reservierungst
 $l['reservations_overview_typeedit'] = "Reservierungstyp bearbeiten";
 
 $l['reservations_overview_options'] = "Reservierungstypen verwalten";
+$l['reservations_edit'] = "Reservierungstyp editieren";
 
 //Fehler
 $l['reservations_error_name'] = "Bitte den Namen ausfüllen.";
